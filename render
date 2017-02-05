@@ -1,0 +1,228 @@
+#!/usr/bin/env zsh
+#
+# Copyright (C) 2015-2017 Dyne.org Foundation
+#
+# Designed, written and maintained by Denis Roio <jaromil@dyne.org>
+#
+# This source code is free software; you can redistribute it
+# and/or modify it under the terms of the GNU Public License
+# as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later
+# version.
+#
+# This source code is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE.  Please refer to the GNU Public License for more
+# details.
+#
+# You should have received a copy of the GNU Public License
+# along with this source code; if not, write to: Free
+# Software Foundation, Inc., 675 Mass Ave, Cambridge, MA
+# 02139, USA.
+
+# full path to writedown's system
+R="`pwd`/writedown"
+# this nails invocation to be from inside the project's directory
+
+writedown_version=0.2
+writedown_release_date="2017"
+
+source $R/zuper/zuper
+
+zmodload zsh/system
+zmodload zsh/mapfile
+zmodload zsh/regex
+zmodload zsh/sched
+zmodload zsh/system
+zmodload zsh/net/tcp
+
+vars+=(x_pandoc f_bib)
+vars+=(input_format input_ext)
+vars+=(output_format output_ext)
+vars+=(section)
+
+vars+=(book_title book_filename)
+
+# for gettext
+TEXTDOMAIN=writedown
+# export DOWSE to env with path to the installation
+# else start it from inside the dir with source dowse
+DEBUG=${DEBUG:-0}
+QUIET=${QUIET:-0}
+LOG=${LOG:-""}
+
+# conclude initialization
+source $R/zuper/zuper.init
+
+func "args: $*"
+
+# load project configuration
+[[ -r config.zsh ]] && source config.zsh
+
+book_title=${WRITEDOWN_TITLE:-"Writedown Example Book"}
+book_filename=${WRITEDOWN_FILENAME:-${book_title// /_}}
+book_author=${WRITEDOWN_AUTHOR:-Anonymous}
+book_affiliation=${WRITEDOWN_AFFILIATION:-Made with Writedown by Dyne.org}
+book_date=${WRITEDOWN_DATE:-`date`}
+book_nrsec=${WRITEDOWN_NRSEC:-no}
+book_toc=${WRITEDOWN_TOC:-yes}
+book_class=${WRITEDOWN_CLASS:-article}
+book_fontsize=${WRITEDOWN_FONTSIZE:-14pt}
+book_tags=${WRITEDOWN_TAGS:-"[comma, separated, words, between, square, brackets]"}
+
+input_format=${WRITEDOWN_INPUT:-markdown}
+input_ext=${WRITEDOWN_INPUT_EXT:-md}
+f_bib=${WRITEDOWN_BIB:-references.bib}
+
+x_pandoc=${WRITEDOWN_PANDOC:="pandoc --smart --standalone -f $input_format "}
+
+[[ $DEBUG != 0 ]]   &&  x_pandoc+=" --verbose "
+
+[[ -r $f_bib ]] && x_pandoc+=" --filter pandoc-citeproc --bibliography $f_bib "
+
+output_format=${1:=docx}
+output_ext=${output_format}
+
+case $output_format in
+    pdf|latex)
+		x_pandoc+=" -H views/options.sty "
+		[[ -r views/options.sty ]] || {
+			# print out a default options.sty"
+			cat <<EOF > views/options.sty
+% Latex rendering headers
+\setlength{\parindent}{1.25em}
+\setlength{\parskip}{.2em}
+\usepackage{etoolbox}
+
+\AtBeginEnvironment{quote}{\parskip 1em}
+%\patchcmd{\quote}{\rightmargin}{\leftmargin 2em \rightmargin}{}{}
+%\usepackage{etoolbox}
+EOF
+        }
+        [[ "$output_format" == "latex" ]] && {
+            output_ext=latex
+        }
+
+        [[ "$output_format" == "pdf" ]] && {
+            output_format=latex
+            output_ext=pdf
+        }
+        ;;
+    *)
+        ;;
+esac
+
+section="$2"
+
+pagebreak=${WRITEDOWN_PAGEBREAK:-"
+
+\pagebreak[4]
+
+"}
+
+[[ $DEBUG != 0 ]] && zdump
+
+[[ "$section" = "" ]] || {
+
+    [[ -r "views/${section}.$input_ext" ]] || {
+        error "$section.md not found in views"
+        return 1 }
+    notice "Rendering section: $section"
+    act "to format $output_format with extension $output_extension"
+    ${=x_pandoc} -t ${output_format} views/$section.$input_ext \
+                 -o pub/$output_section.${output_ext}
+    res=$?
+    [[ $res != 0 ]] && {
+        error "Error in pandoc, returned code: $res"
+        return $res
+    }
+    return 0
+}
+
+
+# render all files in views
+
+
+
+# create temp dir
+ztmp
+frontpage=$ztmpfile
+
+ztmp
+cslstyle=$ztmpfile
+
+cat <<EOF > $frontpage
+---
+title: ${book_title}
+author: ${book_author}
+affiliation: ${book_affiliation}
+date: ${book_date}
+pdf_document:
+keep_tex: yes
+number_sections: ${book_nrsec}
+toc: ${book_toc}
+documentclass: ${book_class}
+fontsize: ${book_fontsize}
+bibliography: ["thesis.bib"]
+csl: $cslstyle
+tags: ${book_tags}
+EOF
+
+[[ -r views/abstract.txt ]] && {
+    print "abstract: |\n" >> $frontpage
+	for i in ${(f)"$(cat views/abstract.txt)"}; do
+		## add two spaces before each line, else not valid yml
+		if [[ "$i[2]" != " " ]]; then
+			print "  $i" >> $frontpage
+		else
+			print "$i" >> $frontpage
+		fi
+	done
+}
+
+cat << EOF >> $frontpage
+
+---
+$pagebreak
+EOF
+
+# [[ $DEBUG = 0 ]] || {
+#     notice "Frontpage rendered:"
+#     cat $frontpage
+# }
+
+views=(`find views -type f -name "*.$input_ext"`)
+[[ ${#views} = 0 ]] && {
+    error "Nothing found in views, please write down something!"
+    return 1 }
+
+for i in $views; do
+    act "rendering file: ::1 path::" $i
+
+	cat <<EOF >> $frontpage
+`cat $i`
+$pagebreak
+EOF
+done
+
+[[ -r references.bib ]] && {
+	cat <<EOF >> $frontpage
+# Bibliography
+
+EOF
+}
+
+# reset output file
+rm -f pub/$book_filename.$input_ext
+
+# render using pandoc
+func "$x_pandoc -t $output_format $frontpage -o pub/$book_filename.$output_ext"
+
+${=x_pandoc} -t $output_format $frontpage -o pub/$book_filename.$output_ext
+
+[[ $? = 0 ]] && {
+	notice "Succesful rendering to file: pub/$book_filename.$output_ext"
+	ls -lh pub/$book_filename.$output_ext
+	file   pub/$book_filename.$output_ext
+}

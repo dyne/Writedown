@@ -1,0 +1,4 @@
+#!/usr/bin/env zsh
+
+mkdir -p pub
+mkdir -p views
