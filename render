@@ -68,12 +68,13 @@ book_date=${WRITEDOWN_DATE:-`date`}
 book_nrsec=${WRITEDOWN_NRSEC:-no}
 book_toc=${WRITEDOWN_TOC:-yes}
 book_class=${WRITEDOWN_CLASS:-article}
+book_citationstyle=${WRITEDOWN_CITSTYLE:-harvard-kings-college-london}
 book_fontsize=${WRITEDOWN_FONTSIZE:-14pt}
 book_tags=${WRITEDOWN_TAGS:-"[comma, separated, words, between, square, brackets]"}
 
 input_format=${WRITEDOWN_INPUT:-markdown}
 input_ext=${WRITEDOWN_INPUT_EXT:-md}
-f_bib=${WRITEDOWN_BIB:-references.bib}
+f_bib=${WRITEDOWN_BIB:-views/references.bib}
 
 x_pandoc=${WRITEDOWN_PANDOC:="pandoc --smart --standalone -f $input_format "}
 
@@ -149,7 +150,6 @@ pagebreak=${WRITEDOWN_PAGEBREAK:-"
 ztmp
 frontpage=$ztmpfile
 
-ztmp
 cslstyle=$ztmpfile
 
 cat <<EOF > $frontpage
@@ -164,8 +164,8 @@ number_sections: ${book_nrsec}
 toc: ${book_toc}
 documentclass: ${book_class}
 fontsize: ${book_fontsize}
-bibliography: ["thesis.bib"]
-csl: $cslstyle
+bibliography: ["${f_bib}"]
+csl: $R/citstyle/${book_citationstyle}.csl
 tags: ${book_tags}
 EOF
 
@@ -192,7 +192,7 @@ EOF
 #     cat $frontpage
 # }
 
-views=(`find views -type f -name "*.$input_ext"`)
+views=(`cat views/index.txt`)
 [[ ${#views} = 0 ]] && {
     error "Nothing found in views, please write down something!"
     return 1 }
@@ -201,12 +201,12 @@ for i in $views; do
     act "rendering file: ::1 path::" $i
 
 	cat <<EOF >> $frontpage
-`cat $i`
+`cat views/$i`
 $pagebreak
 EOF
 done
 
-[[ -r references.bib ]] && {
+[[ -r $f_bib ]] && {
 	cat <<EOF >> $frontpage
 # Bibliography
 
