@@ -110,7 +110,13 @@ EOF
             output_ext=pdf
         }
         ;;
+	docx)
+		output_format=docx
+		output_ext=docx
+		;;
     *)
+		output_format=$WRITEDOWN_OUTPUT_FORMAT
+		output_ext=$WRITEDOWN_OUTPUT_EXTENSION
         ;;
 esac
 
