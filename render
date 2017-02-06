@@ -132,7 +132,7 @@ pagebreak=${WRITEDOWN_PAGEBREAK:-"
     notice "Rendering section: $section"
     act "to format $output_format with extension $output_extension"
     ${=x_pandoc} -t ${output_format} views/$section.$input_ext \
-                 -o pub/$output_section.${output_ext}
+                 -o pub/$book_filename-$section.${output_ext}
     res=$?
     [[ $res != 0 ]] && {
         error "Error in pandoc, returned code: $res"
