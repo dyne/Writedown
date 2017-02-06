@@ -1,4 +1,3 @@
-     Dyne.org software foundry presents...
                 █               ▗▖
                 ▀   ▐▌          ▐▌
     █   █ █▟█▌ ██  ▐███  ▟█▙  ▟█▟▌ ▟█▙ █   █▐▙██▖

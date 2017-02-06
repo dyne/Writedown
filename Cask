@@ -17,3 +17,6 @@
 (depends-on "use-package")
 (depends-on "web-mode")
 (depends-on "helm-bibtex")
+(depends-on "markdown-mode")
+(depends-on "markdown-preview")
+
