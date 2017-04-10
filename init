@@ -24,9 +24,8 @@
 mkdir -p pub
 mkdir -p views
 
-[[ -r views/index.txt ]] || {
-	touch        config.zsh
-	cat <<EOF >> config.zsh
+[[ -r config.zsh ]] ||
+    cat <<EOF > config.zsh
 
 # Added by Writedown on `date`
 WRITEDOWN_TITLE="Writedown Example Article"
@@ -56,13 +55,15 @@ WRITEDOWN_BIB=views/references.bib
 # WRITEDOWN_PANDOC="pandoc --smart --standalone -f markdown
 EOF
 
-	cat <<EOF > views/index.txt
+[[ -r views/index.txt ]] ||
+    cat <<EOF > views/index.txt
 first_chapter.md
 second_chapter.md
 third_chapter.md
 EOF
 
-	cat <<EOF > views/options.sty
+[[ -r views/options.sty ]] ||
+    cat <<EOF > views/options.sty
 % Latex rendering headers
 \setlength{\parindent}{1.25em}
 \setlength{\parskip}{.2em}
@@ -71,15 +72,17 @@ EOF
 \AtBeginEnvironment{quote}{\parskip 1em}
 EOF
 
-	cat <<EOF > views/references.bib
+
+[[ -r views/references.bib ]] ||
+    cat <<EOF > views/references.bib
 @article{Bianchi_2011,
-  author	   = {Bianchi, Amos and Roio, Denis Jaromil},
-  title		   = {Frames from the Life and Death of Jean Charles de Menezes},
-  year		   = 2011,
-  pages		   = {101-109},
-  isbn		   = {http://id.crossref.org/isbn/978-94-007-0641-5},
-  journal	   = {Computers, Privacy and Data Protection: an Element of Choice},
-  publisher	   = {Springer}
+  author       = {Bianchi, Amos and Roio, Denis Jaromil},
+  title        = {Frames from the Life and Death of Jean Charles de Menezes},
+  year         = 2011,
+  pages        = {101-109},
+  isbn         = {http://id.crossref.org/isbn/978-94-007-0641-5},
+  journal      = {Computers, Privacy and Data Protection: an Element of Choice},
+  publisher    = {Springer}
 }
 
 @article{roio2013bitcoin_jaromil,
@@ -110,25 +113,28 @@ EOF
 }
 EOF
 
-	cat <<EOF > views/abstract.txt
+[[ -r views/abstract.txt ]] ||
+    cat <<EOF > views/abstract.txt
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 EOF
 
-	cat <<EOF > views/first_chapter.md
+[[ -r views/first_chapter.md ]] ||
+    cat <<EOF > views/first_chapter.md
 # de Finibus Bonorum et Malorum
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat [@Bianchi_2011]. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.		
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat [@Bianchi_2011]. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 EOF
 
-	cat <<EOF > views/second_chapter.md
+[[ -r views/second_chapter.md ]] ||
+    cat <<EOF > views/second_chapter.md
 # Voluptas
 
 Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo [@dowse_whitepaper]. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt [@roio2013bitcoin_jaromil]. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?
 EOF
 
-	cat <<EOF > views/third_chapter.md
+[[ -r views/third_chapter.md ]] ||
+    cat <<EOF > views/third_chapter.md
 # Tempora
 
 At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio [@roio2012re]. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat.
 EOF
-}

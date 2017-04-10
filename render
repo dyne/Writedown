@@ -25,7 +25,7 @@
 R="`pwd`/writedown"
 # this nails invocation to be from inside the project's directory
 
-writedown_version=0.2
+writedown_version=0.3
 writedown_release_date="2017"
 
 source $R/zuper/zuper
@@ -198,16 +198,23 @@ EOF
 #     cat $frontpage
 # }
 
-views=(`cat views/index.txt`)
+views=(`grep -v '^#' views/index.txt`)
 [[ ${#views} = 0 ]] && {
     error "Nothing found in views, please write down something!"
     return 1 }
 
 for i in $views; do
-    act "rendering file: ::1 path::" $i
+	f="$i"
+	[[ -r "$f" ]] || f="views/$i"
+	[[ -r "$f" ]] || {
+		error "error in views/index.txt"
+		error "file not found: $i"
+		return 1
+	}
+    act "rendering file: ::1 path::" $f
 
 	cat <<EOF >> $frontpage
-`cat views/$i`
+`cat $f`
 $pagebreak
 EOF
 done
