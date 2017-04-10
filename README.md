@@ -33,6 +33,7 @@ the skeleton of your new webpage is created inside the directory:
     config.zsh -> contains title and general configurations
     views/*.md -> each file is a chapter written
 	views/index.txt -> the order of chapters, one per line
+	views/options.sty -> custom options for latex/pdf render
     views/abstract.txt -> contains the abstract of the article
 	views/references.bib -> contains bibtex entries
 
@@ -46,6 +47,8 @@ When used, the first argument of the render command can be one of the three supp
 	./writedown/render pdf
 	./writedown/render docx
 	./writedown/render latex
+
+For more custom rendering solutions, see config.zsh and the commented settings `WRITEDOWN_OUTPUT_FORMAT` and `WRITEDOWN_OUTPUT_EXTENSION` which can be configured to match the output format for pandoc and the extension of the resulting file.
 
 
 # DEVELOPERS
