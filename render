@@ -87,7 +87,7 @@ output_ext=${output_format}
 
 case $output_format in
     pdf|latex)
-		x_pandoc+=" -H views/options.sty "
+		x_pandoc+=" --template=$R/template.tex -H views/options.sty "
 		[[ -r views/options.sty ]] || {
 			# print out a default options.sty"
 			cat <<EOF > views/options.sty
@@ -101,6 +101,7 @@ case $output_format in
 %\usepackage{etoolbox}
 EOF
         }
+
         [[ "$output_format" == "latex" ]] && {
             output_ext=latex
         }
@@ -137,6 +138,12 @@ pagebreak=${WRITEDOWN_PAGEBREAK:-"
         return 1 }
     notice "Rendering section: $section"
     act "to format $output_format with extension $output_extension"
+
+	act "extended characters detected:"
+	extended=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' views/${section}.$input_ext`
+	[[ ${#extended} != 0 ]] && {
+		warning "lines listed above may break the pdf rendering" }
+
     ${=x_pandoc} -t ${output_format} views/$section.$input_ext \
                  -o pub/$book_filename-$section.${output_ext}
     res=$?
@@ -212,6 +219,12 @@ for i in $views; do
 		return 1
 	}
     act "rendering file: ::1 path::" $f
+
+	extended=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' $f`
+	[[ ${#extended} != 0 ]] && {
+		warning "extended characters detected:"
+		print "$extended"
+		warning "lines listed above may break the pdf rendering" }
 
 	cat <<EOF >> $frontpage
 `cat $f`
