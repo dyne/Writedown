@@ -71,6 +71,7 @@ book_class=${WRITEDOWN_CLASS:-article}
 book_citationstyle=${WRITEDOWN_CITSTYLE:-harvard-kings-college-london}
 book_fontsize=${WRITEDOWN_FONTSIZE:-14pt}
 book_tags=${WRITEDOWN_TAGS:-"[comma, separated, words, between, square, brackets]"}
+book_zotero=${WRITEDOWN_ZOTERO:-no}
 
 input_format=${WRITEDOWN_INPUT:-markdown}
 input_ext=${WRITEDOWN_INPUT_EXT:-md}
@@ -81,9 +82,47 @@ x_pandoc=${WRITEDOWN_PANDOC:="pandoc --smart --standalone -f $input_format "}
 [[ $DEBUG != 0 ]]   &&  x_pandoc+=" --verbose "
 
 [[ -r $f_bib ]] && x_pandoc+=" --filter pandoc-citeproc --bibliography $f_bib "
+[[ "$book_zotero" = "yes" ]] && x_pandoc+=" --filter pandoc-zotxt "
 
 output_format=${1:=docx}
 output_ext=${output_format}
+
+correct_extended_chars() {
+	fn correct_extended_chars
+	local f out dest
+	local extended corrected
+	local errl corrl
+	f="$1"
+	out="$2"
+	req=(f out)
+	freq=($f)
+	ckreq || return 1
+
+	ztmp
+	dest=$ztmpfile
+	cp $f $dest
+    extended=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' $dest`
+	if [[ ${#extended} -gt 0 ]]; then
+		errl=`print $extended | wc -l`
+		sed -i "s/‘/'/g; s/’/'/g; s/…/.../g" $dest
+		sed -i 's/“/"/g; s/”/"/g; s/¨/"/g' $dest
+		corrected=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' $dest`
+		corrl=`print $corrected | wc -l`
+		print - "$corrected" | hexdump -c
+		warning "extended characters detected on $errl lines:"
+		warning "lines listed above may break the pdf rendering"
+		warning "attempted fix..."
+
+		if [[ $corrl != $errl ]]; then
+			notice "corrected $(( $errl - $corrl )) lines"
+		else
+			error "cannot apply autocorrection on any of the lines above"
+		fi
+	fi
+	cp $dest $out
+	rm -f $ztmpfile
+}
+
 
 case $output_format in
     pdf|latex)
@@ -132,20 +171,30 @@ pagebreak=${WRITEDOWN_PAGEBREAK:-"
 [[ $DEBUG != 0 ]] && zdump
 
 [[ "$section" = "" ]] || {
+	source=""
+	
+    try="views/${section}.$input_ext"; [[ -r "$try" ]] && source="$try"
+    try="views/${section}";            [[ -r "$try" ]] && source="$try"
+    try="${section}.$input_ext";       [[ -r "$try" ]] && source="$try"
+    try="${section}";                  [[ -r "$try" ]] && source="$try"
+	[[ "$source" = "" ]] && {
+		error "$section not found"
+		return 1 }
+    notice "Rendering: $source"
+    act "to format $output_format with extension $output_ext"
 
-    [[ -r "views/${section}.$input_ext" ]] || {
-        error "$section.md not found in views"
-        return 1 }
-    notice "Rendering section: $section"
-    act "to format $output_format with extension $output_extension"
+	ztmp
+	tmpsrc=$ztmpfile
+	correct_extended_chars "$source" $tmpsrc
 
-	act "extended characters detected:"
-	extended=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' views/${section}.$input_ext`
-	[[ ${#extended} != 0 ]] && {
-		warning "lines listed above may break the pdf rendering" }
+	# reset output file
+	output="pub/${book_filename}-${section/\//-}.$output_ext"
+	[[ -r "$output" ]] && rm -f "$output"
 
-    ${=x_pandoc} -t ${output_format} views/$section.$input_ext \
-                 -o pub/$book_filename-$section.${output_ext}
+	act "rendering to $output"
+	func "${=x_pandoc} -t ${output_format} $tmpsrc -o $output"
+          ${=x_pandoc} -t ${output_format} $tmpsrc -o $output
+
     res=$?
     [[ $res != 0 ]] && {
         error "Error in pandoc, returned code: $res"
@@ -219,15 +268,12 @@ for i in $views; do
 		return 1
 	}
     act "rendering file: ::1 path::" $f
-
-	extended=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' $f`
-	[[ ${#extended} != 0 ]] && {
-		warning "extended characters detected:"
-		print "$extended"
-		warning "lines listed above may break the pdf rendering" }
+	ztmp
+	dest=$ztmpfile
+	correct_extended_chars $f $dest
 
 	cat <<EOF >> $frontpage
-`cat $f`
+`cat $dest`
 $pagebreak
 EOF
 done
@@ -240,12 +286,12 @@ EOF
 }
 
 # reset output file
-rm -f pub/$book_filename.$input_ext
+output="pub/$book_filename.$output_ext"
+[[ -r "$output" ]] && rm -f "$output"
 
 # render using pandoc
-func "$x_pandoc -t $output_format $frontpage -o pub/$book_filename.$output_ext"
-
-${=x_pandoc} -t $output_format $frontpage -o pub/$book_filename.$output_ext
+func "$x_pandoc  -t $output_format $frontpage -o $ouput"
+    ${=x_pandoc} -t $output_format $frontpage -o "$output"
 
 [[ $? = 0 ]] && {
 	notice "Succesful rendering to file: pub/$book_filename.$output_ext"
