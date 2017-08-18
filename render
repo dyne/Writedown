@@ -25,8 +25,8 @@
 R="`pwd`/writedown"
 # this nails invocation to be from inside the project's directory
 
-writedown_version=0.3
-writedown_release_date="2017"
+writedown_version=0.4
+writedown_release_date="Aug/2017"
 
 source $R/zuper/zuper
 
@@ -71,6 +71,8 @@ book_class=${WRITEDOWN_CLASS:-article}
 book_citationstyle=${WRITEDOWN_CITSTYLE:-harvard-kings-college-london}
 book_fontsize=${WRITEDOWN_FONTSIZE:-14pt}
 book_tags=${WRITEDOWN_TAGS:-"[comma, separated, words, between, square, brackets]"}
+
+# experimental, until extras/pandoc-zotxt is fixed
 book_zotero=${WRITEDOWN_ZOTERO:-no}
 
 input_format=${WRITEDOWN_INPUT:-markdown}
@@ -84,8 +86,9 @@ x_pandoc=${WRITEDOWN_PANDOC:="pandoc --smart --standalone -f $input_format "}
 [[ -r $f_bib ]] && x_pandoc+=" --filter pandoc-citeproc --bibliography $f_bib "
 [[ "$book_zotero" = "yes" ]] && x_pandoc+=" --filter pandoc-zotxt "
 
-output_format=${1:=docx}
-output_ext=${output_format}
+WRITEDOWN_OUTPUT_FORMAT=${1:-docx}
+WRITEDOWN_OUTPUT_EXTENSION=${1:-docx}
+
 
 correct_extended_chars() {
 	fn correct_extended_chars
@@ -124,7 +127,7 @@ correct_extended_chars() {
 }
 
 
-case $output_format in
+case $WRITEDOWN_OUTPUT_FORMAT in
     pdf|latex)
 		x_pandoc+=" --template=$R/template.tex -H views/options.sty "
 		[[ -r views/options.sty ]] || {
@@ -141,15 +144,16 @@ case $output_format in
 EOF
         }
 
-        [[ "$output_format" == "latex" ]] && {
+        [[ "$WRITEDOWN_OUTPUT_FORMAT" == "latex" ]] && {
             output_ext=latex
         }
 
-        [[ "$output_format" == "pdf" ]] && {
+        [[ "$$WRITEDOWN_OUTPUT_FORMAT" == "pdf" ]] && {
             output_format=latex
             output_ext=pdf
         }
         ;;
+
 	docx)
 		output_format=docx
 		output_ext=docx
@@ -160,6 +164,7 @@ EOF
         ;;
 esac
 
+# optional second argument, single section (file) to render
 section="$2"
 
 pagebreak=${WRITEDOWN_PAGEBREAK:-"
