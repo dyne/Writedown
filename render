@@ -71,6 +71,8 @@ book_citationstyle=${WRITEDOWN_CITSTYLE:-harvard-kings-college-london}
 book_fontsize=${WRITEDOWN_FONTSIZE:-14pt}
 book_tags=${WRITEDOWN_TAGS:-"[comma, separated, words, between, square, brackets]"}
 
+notice "book_author: $book_author"
+
 # experimental, until extras/pandoc-zotxt is fixed
 book_zotero=${WRITEDOWN_ZOTERO:-no}
 
@@ -153,7 +155,7 @@ EOF
             output_ext=latex
         }
 
-        [[ "$$WRITEDOWN_OUTPUT_FORMAT" == "pdf" ]] && {
+        [[ "$WRITEDOWN_OUTPUT_FORMAT" == "pdf" ]] && {
             output_format=latex
             output_ext=pdf
         }
@@ -299,8 +301,9 @@ EOF
 output="pub/$book_filename.$output_ext"
 [[ -r "$output" ]] && rm -f "$output"
 
+notice "Output format: $output_format"
 # render using pandoc
-func "$x_pandoc  -t $output_format $frontpage -o $ouput"
+func "$x_pandoc  -t $output_format $frontpage -o $output"
     ${=x_pandoc} -t $output_format $frontpage -o "$output"
 
 [[ $? = 0 ]] && {
