@@ -10,6 +10,6 @@ generate-pdf: create-target-dir
 	./writedown/render pdf
 
 open-pdf:
-	open pub/DECODE_Whitepaper_vDRAFT.pdf
+	open pub/Test_Document_vDRAFT.pdf
 
 
