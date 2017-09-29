@@ -1,4 +1,4 @@
-DEBUG=1
+DEBUG=0
 LOG="./writedown.log"
 
 WRITEDOWN_VERSION="DRAFT"
