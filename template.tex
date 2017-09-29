@@ -98,7 +98,9 @@
 \fi
 
 \title{$title$}
-\author{$author$}
+$if(author)$
+\author{$for(author)$$author$$sep$ \and $endfor$}
+$endif$
 \date{$date$}
 
 \begin{document}
