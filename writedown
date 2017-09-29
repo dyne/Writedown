@@ -1,0 +1,19 @@
+#!/usr/bin/env zsh
+
+# wrapper for quick writedown usage outside of a project directory
+# fails if project files are not present in path
+
+[[ -r /usr/local/writedown ]] && R=/usr/local/writedown
+[[ -r writedown ]] && R=`pwd`
+
+src="$1"
+[[ "$src" = "" ]] && { print "Usage: $0 file.md"; 	 return 1 }
+[[ -r "$src" ]]     || { print "File not found: $src"; return 1 }
+
+case `basename $0` in
+	 writedown-pdf)   $R/render pdf   "$src" ;;
+	 writedown-doc*)  $R/render docx  "$src" ;;
+	 writedown-latex) $R/render latex "$src" ;;
+	 writedown-tex)   $R/render latex "$src" ;;
+	 *)               $R/render docx  "$src" ;;
+esac
