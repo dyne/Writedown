@@ -21,7 +21,7 @@ open-all-pdfs:
 generate-pandoc: create-target-dir
 	$(info ****** Testing with pandoc)
 	$(eval document_name=test-pandoc)
-	pandoc --smart --standalone -f markdown --template ../template.tex -H views/options.sty -t latex test-pandoc.md -o pub/test-pandoc.pdf
+	pandoc --smart --standalone -f markdown --listings --template=../template.tex -t latex test-pandoc.md -o pub/test-pandoc.pdf
 
 generate-writedown: create-target-dir
 	$(info ****** Testing with writedown)

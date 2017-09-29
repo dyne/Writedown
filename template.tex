@@ -30,6 +30,27 @@
             pdfborder={0 0 0},
             breaklinks=true}
 \urlstyle{same}  % don't use monospace font for urls
+\usepackage{xcolor}
+$if(listings)$
+\usepackage{listings}
+\lstset{
+    basicstyle=\ttfamily,
+%    numbers=left,
+    numberstyle=\footnotesize,
+    stepnumber=2,
+    numbersep=5pt,
+    backgroundcolor=\color{black!10},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    captionpos=b,
+    breaklines=true,
+    breakatwhitespace=true,
+    breakautoindent=true,
+    linewidth=\textwidth
+}
+$endif$
 \usepackage{color}
 \usepackage{fancyvrb}
 \newcommand{\VerbBar}{|}
@@ -96,6 +117,12 @@
 \let\oldsubparagraph\subparagraph
 \renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
 \fi
+% END OF CONFIG    ------------------------------------------
+
+% INCLUDE OPTIONS FOR CUSTOMISATION:
+\usepackage{views/options}
+
+% START OF CONTENT ------------------------------------------
 
 \title{$title$}
 $if(author)$

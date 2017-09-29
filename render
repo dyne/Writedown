@@ -79,7 +79,7 @@ input_format=${WRITEDOWN_INPUT:-markdown}
 input_ext=${WRITEDOWN_INPUT_EXT:-md}
 f_bib=${WRITEDOWN_BIB:-views/references.bib}
 
-x_pandoc=${WRITEDOWN_PANDOC:="pandoc --smart --standalone -f $input_format "}
+x_pandoc=${WRITEDOWN_PANDOC:="pandoc --smart --listings --standalone -f $input_format "}
 
 [[ $DEBUG != 0 ]]   &&  x_pandoc+=" --verbose "
 
@@ -132,10 +132,10 @@ correct_extended_chars() {
 	rm -f $ztmpfile
 }
 
-
+# If you use the --template option it ignores the -H --include-in-header option so we move the inlude into the template.tex
 case $WRITEDOWN_OUTPUT_FORMAT in
     pdf|latex)
-		x_pandoc+=" --template=$R/template.tex -H views/options.sty "
+		x_pandoc+=" --template=$R/template.tex "
 		[[ -r views/options.sty ]] || {
 			# print out a default options.sty"
 			cat <<EOF > views/options.sty
