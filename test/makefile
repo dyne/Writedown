@@ -7,7 +7,7 @@ clean:
 	rm -r pub
 
 generate-pdf: create-target-dir
-	document_name="Test_Document_vDRAFT"
+	$(eval document_name="Test_Document_vDRAFT")
 	./writedown/render pdf
 
 open-pdf:
