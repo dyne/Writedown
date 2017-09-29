@@ -71,7 +71,6 @@ book_citationstyle=${WRITEDOWN_CITSTYLE:-harvard-kings-college-london}
 book_fontsize=${WRITEDOWN_FONTSIZE:-14pt}
 book_tags=${WRITEDOWN_TAGS:-"[comma, separated, words, between, square, brackets]"}
 
-
 # experimental, until extras/pandoc-zotxt is fixed
 book_zotero=${WRITEDOWN_ZOTERO:-no}
 
@@ -135,29 +134,24 @@ correct_extended_chars() {
 # If you use the --template option it ignores the -H --include-in-header option so we move the inlude into the template.tex
 case $WRITEDOWN_OUTPUT_FORMAT in
     pdf|latex)
-		x_pandoc+=" --template=$R/template.tex "
-		[[ -r views/options.sty ]] || {
-			# print out a default options.sty"
-			cat <<EOF > views/options.sty
-% Latex rendering headers
-\setlength{\parindent}{1.25em}
-\setlength{\parskip}{.2em}
-\usepackage{etoolbox}
+		notice "Configuring pdf/latex output format"
+		try=/etc/writedown/template.tex; [[ -r $try ]] && tmpl=$try
+		try=$R/template.tex;             [[ -r $try ]] && tmpl=$try
+		try=template.tex;                [[ -r $try ]] && tmpl=$try
+		try=views/template.tex;          [[ -r $try ]] && tmpl=$try
+		act "latex template: $tmpl"
 
-\AtBeginEnvironment{quote}{\parskip 1em}
-%\patchcmd{\quote}{\rightmargin}{\leftmargin 2em \rightmargin}{}{}
-%\usepackage{etoolbox}
-EOF
-        }
+		x_pandoc+=" --template=$tmpl "
 
-        [[ "$WRITEDOWN_OUTPUT_FORMAT" == "latex" ]] && {
+        if [[ "$WRITEDOWN_OUTPUT_FORMAT" = "latex" ]]; then
             output_ext=latex
-        }
+			act "rendering to latex"
 
-        [[ "$WRITEDOWN_OUTPUT_FORMAT" == "pdf" ]] && {
+		elif [[ "$WRITEDOWN_OUTPUT_FORMAT" = "pdf" ]]; then
             output_format=latex
             output_ext=pdf
-        }
+			act "rendering to pdf"
+		fi
         ;;
 
 	docx)
@@ -198,8 +192,15 @@ pagebreak=${WRITEDOWN_PAGEBREAK:-"
 	tmpsrc=$ztmpfile
 	correct_extended_chars "$source" $tmpsrc
 
+
+	if [[ -d writedown ]]; then  # we are inside a project
+		output="pub/${book_filename}-${section/\//-}.$output_ext"
+	else
+		# writedown called around from outside a project for the
+		# conversion of a single file
+		output="${book_filename}.$output_ext"
+	fi
 	# reset output file
-	output="pub/${book_filename}-${section/\//-}.$output_ext"
 	[[ -r "$output" ]] && rm -f "$output"
 
 	act "rendering to $output"
@@ -297,10 +298,9 @@ EOF
 }
 
 # reset output file
-output="pub/$book_filename.$output_ext"
+output=${WRITEDOWN_OUTPUT:-pub/$book_filename.$output_ext}
 [[ -r "$output" ]] && rm -f "$output"
 
-notice "Output format: $output_format"
 # render using pandoc
 notice "pandoc-cmd: $x_pandoc  -t $output_format $frontpage -o $output"
 func "$x_pandoc  -t $output_format $frontpage -o $output"

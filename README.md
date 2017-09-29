@@ -44,16 +44,6 @@ the command:
 
     git sudmodule update --init
 
-For integration with the blibliography manager Zotero, one should
-install the [zotxt](https://gitlab.com/egh/zotxt) extension by downloading it from:
-https://addons.mozilla.org/firefox/downloads/latest/zotxt/addon-454106-latest.xpi
-
-Then if using Emacs to edit markdown files is possible to install
-the [zotxt-emacs](https://github.com/egh/zotxt-emacs) package from the
-default MELPA repositories and activate the `zotxt-easykey` mode to run queries
-using the `C-c " k` key combo.
-
-
 ## BASIC USAGE
 
 First create a directory for your article, then place the writedown
@@ -69,7 +59,7 @@ the skeleton of your new webpage is created inside the directory:
     config.zsh -> contains title and general configurations
     views/*.md -> each file is a chapter written
 	views/index.txt -> the order of chapters, one per line
-	views/options.sty -> custom options for latex/pdf render
+	views/template.tex -> custom template for latex/pdf render
     views/abstract.txt -> contains the abstract of the article
 	views/references.bib -> contains bibtex entries
 
@@ -109,6 +99,37 @@ prefixing the command as follows:
 Debugging output will include all latex rendering messages previous to
 the pdf rendering and any other information related to the command.
 
+## SINGLE FILE RENDERING (experimental)
+
+Upon installation of `writedown` on a default executable path, it is
+possible to use it to render single markdown files placed anywhere in
+a filesystem, without the need to init a new project directory.
+
+One can simply invoke `writedown-pdf` or `writedown-docx` followed by
+the path to a markdown source file and the result will be placed in
+the current directiory; the dash suffix may support other extensions
+too.
+
+This is an experimental feature and can be easily improved as needs
+arise.
+
+## ZOTERO INTEGRATION (experimental)
+
+For integration with the blibliography manager Zotero, one should
+install the [zotxt](https://gitlab.com/egh/zotxt) extension by downloading it from:
+https://addons.mozilla.org/firefox/downloads/latest/zotxt/addon-454106-latest.xpi
+
+Then if using Emacs to edit markdown files is possible to install
+the [zotxt-emacs](https://github.com/egh/zotxt-emacs) package from the
+default MELPA repositories and activate the `zotxt-easykey` mode to run queries
+using the `C-c " k` key combo.
+
+Recent tests show that emacs queries via zotxt succeed but the pandoc
+support for the zotxt extension is not yet mature. Writedown will
+include the pandoc zotxt plugin inside its sourcecode when it will
+become stable, meanwhile one can help its development and
+troubleshooting at https://github.com/egh/zotxt
+
 ## DEVELOPERS
 
 Bleeding edge is on GitHub. See https://github.com/dyne/writedown
@@ -130,6 +151,8 @@ https://www.dyne.org/donate
 Writedown is Copyright (C) 2016-2017 by the Dyne.org Foundation
 
 Writedown is designed, written and maintained by Denis Roio <jaromil@dyne.org>
+
+Thanks to reviews and contributions by James Barrit <jimb@thoughtworks.com>
 
     This program is free software: you can redistribute it and/or
     modify it under the terms of the GNU Affero General Public License

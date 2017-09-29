@@ -104,6 +104,13 @@ $endif$
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
 }
+
+% previously included by writedown in options.sty
+\setlength{\parindent}{1.25em}
+\setlength{\parskip}{.2em}
+\usepackage{etoolbox}
+\AtBeginEnvironment{quote}{\parskip 1em}
+
 \setlength{\emergencystretch}{3em}  % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}

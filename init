@@ -21,6 +21,10 @@
 # Software Foundation, Inc., 675 Mass Ave, Cambridge, MA
 # 02139, USA.
 
+# full path to writedown's system
+[[ -r /usr/local/writedown ]] && R=/usr/local/writedown
+[[ -d writedown ]] && R=`pwd`/writedown
+
 mkdir -p pub
 mkdir -p views
 
@@ -62,16 +66,7 @@ second_chapter.md
 third_chapter.md
 EOF
 
-[[ -r views/options.sty ]] ||
-    cat <<EOF > views/options.sty
-% Latex rendering headers
-\setlength{\parindent}{1.25em}
-\setlength{\parskip}{.2em}
-\usepackage{etoolbox}
-
-\AtBeginEnvironment{quote}{\parskip 1em}
-EOF
-
+[[ -r views/template.tex ]] || cp $R/template.tex views/template.tex
 
 [[ -r views/references.bib ]] ||
     cat <<EOF > views/references.bib
