@@ -1,5 +1,5 @@
 ---
-title: Some Title
+title: Pandoc direct Test
 author: [Author 1, Author 2, Author 3, Author 4]
 affiliation: Affiliation
 date: 11-04-2018
