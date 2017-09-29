@@ -69,7 +69,7 @@ the skeleton of your new webpage is created inside the directory:
     config.zsh -> contains title and general configurations
     views/*.md -> each file is a chapter written
 	views/index.txt -> the order of chapters, one per line
-	views/options.sty -> custom options for latex/pdf render
+	views/template.tex -> custom template for latex/pdf render
     views/abstract.txt -> contains the abstract of the article
 	views/references.bib -> contains bibtex entries
 

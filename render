@@ -136,20 +136,12 @@ correct_extended_chars() {
 
 case $WRITEDOWN_OUTPUT_FORMAT in
     pdf|latex)
-		x_pandoc+=" --template=$R/template.tex -H views/options.sty "
-		[[ -r views/options.sty ]] || {
-			# print out a default options.sty"
-			cat <<EOF > views/options.sty
-% Latex rendering headers
-\setlength{\parindent}{1.25em}
-\setlength{\parskip}{.2em}
-\usepackage{etoolbox}
+		try=/etc/writedown/template.tex; [[ -r $try ]] && tmpl=$try
+		try=$R/template.tex;             [[ -r $try ]] && tmpl=$try
+		try=template.tex;                [[ -r $try ]] && tmpl=$try
+		try=views/template.tex;          [[ -r $try ]] && tmpl=$try
 
-\AtBeginEnvironment{quote}{\parskip 1em}
-%\patchcmd{\quote}{\rightmargin}{\leftmargin 2em \rightmargin}{}{}
-%\usepackage{etoolbox}
-EOF
-        }
+		x_pandoc+=" --template=$tmpl "
 
         [[ "$WRITEDOWN_OUTPUT_FORMAT" == "latex" ]] && {
             output_ext=latex
