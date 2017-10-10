@@ -143,14 +143,15 @@ case $WRITEDOWN_OUTPUT_FORMAT in
 
 		x_pandoc+=" --template=$tmpl "
 
-        if [[ "$WRITEDOWN_OUTPUT_FORMAT" = "latex" ]]; then
-            output_ext=latex
-			act "rendering to latex"
+                if [[ "$WRITEDOWN_OUTPUT_FORMAT" = "latex" ]]; then
+                    output_format=latex
+                    output_ext=tex
+		    act "rendering to latex"
 
 		elif [[ "$WRITEDOWN_OUTPUT_FORMAT" = "pdf" ]]; then
-            output_format=latex
-            output_ext=pdf
-			act "rendering to pdf"
+                    output_format=latex
+                    output_ext=pdf
+		    act "rendering to pdf"
 		fi
         ;;
 
