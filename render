@@ -135,10 +135,20 @@ correct_extended_chars() {
 case $WRITEDOWN_OUTPUT_FORMAT in
     pdf|latex)
 		notice "Configuring pdf/latex output format"
-		try=/etc/writedown/template.tex; [[ -r $try ]] && tmpl=$try
-		try=$R/template.tex;             [[ -r $try ]] && tmpl=$try
-		try=template.tex;                [[ -r $try ]] && tmpl=$try
-		try=views/template.tex;          [[ -r $try ]] && tmpl=$try
+		if [[ "$WRITEDOWN_LATEX_TEMPLATE" != "" ]] &&
+			   [[ -r "$WRITEDOWN_LATEX_TEMPLATE" ]]; then
+			tmpl=$WRITEDOWN_LATEX_TEMPLATE
+		else
+			try=/etc/writedown/template.tex; [[ -r $try ]] && tmpl=$try
+			try=$R/template.tex;             [[ -r $try ]] && tmpl=$try
+			try=template.tex;                [[ -r $try ]] && tmpl=$try
+			try=views/template.tex;          [[ -r $try ]] && tmpl=$try
+		fi
+		[[ -r $tmpl ]] || {
+			error "Latex template not found ($tmpl)"
+			error "set WRITEDOWN_LATEX_TEMPLATE in config.zsh"
+			error "default: views/template.tex (from $R/template.tex)"
+			return 1 }
 		act "latex template: $tmpl"
 
 		x_pandoc+=" --template=$tmpl "
