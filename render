@@ -110,8 +110,15 @@ correct_extended_chars() {
     extended=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' $dest`
 	if [[ ${#extended} -gt 0 ]]; then
 		errl=`print $extended | wc -l`
-		sed -i "s/‘/'/g; s/’/'/g; s/…/.../g" $dest
-		sed -i 's/“/"/g; s/”/"/g; s/¨/"/g' $dest
+		act "correcting invalid characters in $f"
+        if [[ "$(uname) " = "Darwin " ]]; then
+            sed -i '' -e "s/‘/'/g; s/’/'/g; s/…/.../g" $dest
+            sed -i '' -e 's/“/"/g; s/”/"/g; s/¨/"/g' $dest
+        else
+            sed -i'' \
+				-e "s/‘/'/g; s/’/'/g; s/…/.../g" \
+				-e 's/“/"/g; s/”/"/g; s/¨/"/g' $dest
+        fi
 		corrected=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' $dest`
 		corrl=`print $corrected | wc -l`
 		print
