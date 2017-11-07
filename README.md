@@ -42,7 +42,7 @@ If installed from its Git repository, then its necessary also to
 download the [zuper](https://github.com/dyne/zuper) submodule using
 the command:
 
-    git sudmodule update --init
+    git submodule update --init
 
 ## BASIC USAGE
 
