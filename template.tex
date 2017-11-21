@@ -1,5 +1,9 @@
-\documentclass[14pt,]{article}
+\documentclass[a4paper]{extarticle}
 \usepackage{lmodern}
+$if(fontsize)$
+\usepackage[$fontsize$]{extsizes}
+$endif$
+\usepackage{fullpage}
 \usepackage{longtable}
 \usepackage{booktabs}
 \usepackage{amssymb,amsmath}
@@ -125,9 +129,6 @@ $endif$
 \renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
 \fi
 % END OF CONFIG    ------------------------------------------
-
-% INCLUDE OPTIONS FOR CUSTOMISATION:
-\usepackage{views/options}
 
 % START OF CONTENT ------------------------------------------
 
