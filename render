@@ -54,9 +54,9 @@ func "args: $*"
 
 # load project configuration
 [[ "$WRITEDOWN_CONFIG" = "" ]] && {
-	[[ -r /etc/writedown/config.zsh ]] && \
-		WRITEDOWN_CONFIG=/etc/writedown/config.zsh
-	[[ -r config.zsh ]] && WRITEDOWN_CONFIG=config.zsh }
+    [[ -r /etc/writedown/config.zsh ]] && \
+        WRITEDOWN_CONFIG=/etc/writedown/config.zsh
+    [[ -r config.zsh ]] && WRITEDOWN_CONFIG=config.zsh }
 [[ "$WRITEDOWN_CONFIG" = "" ]] || source $WRITEDOWN_CONFIG
 
 book_title=${WRITEDOWN_TITLE:-"Writedown Example Book"}
@@ -84,8 +84,8 @@ x_pandoc=${WRITEDOWN_PANDOC:="pandoc --smart --listings --standalone -f $input_f
 
 # add bibliographic references to pandoc rendering if file is present
 [[ -r $f_bib ]] && {
-	x_pandoc+=" --filter pandoc-citeproc --bibliography $f_bib "
-	[[ "$book_zotero" = "yes" ]] && x_pandoc+=" --filter pandoc-zotxt "
+    x_pandoc+=" --filter pandoc-citeproc --bibliography $f_bib "
+    [[ "$book_zotero" = "yes" ]] && x_pandoc+=" --filter pandoc-zotxt "
 }
 
 WRITEDOWN_OUTPUT_FORMAT=${1:-$WRITEDOWN_OUTPUT_FORMAT}
@@ -94,91 +94,93 @@ WRITEDOWN_OUTPUT_EXTENSION=${1:-$WRITEDOWN_OUTPUT_EXTENSION}
 [[ "$WRITEDOWN_OUTPUT_EXTENSION" = "" ]] && WRITEDOWN_OUTPUT_EXTENSION=docx
 
 correct_extended_chars() {
-	fn correct_extended_chars
-	local f out dest
-	local extended corrected
-	local errl corrl
-	f="$1"
-	out="$2"
-	req=(f out)
-	freq=($f)
-	ckreq || return 1
+    fn correct_extended_chars
+    local f out dest
+    local extended corrected
+    local errl corrl
+    f="$1"
+    out="$2"
+    req=(f out)
+    freq=($f)
+    ckreq || return 1
 
-	ztmp
-	dest=$ztmpfile
-	cp $f $dest
+    ztmp
+    dest=$ztmpfile
+    cp $f $dest
     extended=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' $dest`
-	if [[ ${#extended} -gt 0 ]]; then
-		errl=`print $extended | wc -l`
-		act "correcting invalid characters in $f"
+    if [[ ${#extended} -gt 0 ]]; then
+        errl=`print $extended | wc -l`
+        act "correcting invalid characters in $f"
         if [[ "$(uname) " = "Darwin " ]]; then
             sed -i '' -e "s/‘/'/g; s/’/'/g; s/…/.../g" $dest
             sed -i '' -e 's/“/"/g; s/”/"/g; s/¨/"/g' $dest
         else
             sed -i'' \
-				-e "s/‘/'/g; s/’/'/g; s/…/.../g" \
-				-e 's/“/"/g; s/”/"/g; s/¨/"/g' $dest
+                -e "s/‘/'/g; s/’/'/g; s/…/.../g" \
+                -e 's/“/"/g; s/”/"/g; s/¨/"/g' $dest
         fi
-		corrected=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' $dest`
-		corrl=`print $corrected | wc -l`
-		print
-		print - "$corrected"
-		print
-		warning "extended characters detected on $errl lines:"
-		warning "lines listed above may break the pdf rendering"
-		warning "attempted fix..."
+        corrected=`perl -ane '{ if(m/[[:^ascii:]]/) { print  } }' $dest`
+        corrl=`print $corrected | wc -l`
+        print
+        print - "$corrected"
+        print
+        warning "extended characters detected on $errl lines:"
+        warning "lines listed above may break the pdf rendering"
+        warning "attempted fix..."
 
-		if [[ $corrl != $errl ]]; then
-			notice "corrected $(( $errl - $corrl )) lines"
-		else
-			error "cannot apply autocorrection on any of the lines above"
-		fi
-	fi
-	cp $dest $out
-	rm -f $ztmpfile
+        if [[ $corrl != $errl ]]; then
+            notice "corrected $(( $errl - $corrl )) lines"
+        else
+            error "cannot apply autocorrection on any of the lines above"
+        fi
+    fi
+    cp $dest $out
+    rm -f $ztmpfile
 }
 
-# If you use the --template option it ignores the -H --include-in-header option so we move the inlude into the template.tex
+# If you use the --template option it ignores the -H
+# --include-in-header option so we move the inlude into the
+# template.tex
 case $WRITEDOWN_OUTPUT_FORMAT in
     pdf|latex)
-		notice "Configuring pdf/latex output format"
-		if [[ "$WRITEDOWN_LATEX_TEMPLATE" != "" ]] &&
-			   [[ -r "$WRITEDOWN_LATEX_TEMPLATE" ]]; then
-			tmpl=$WRITEDOWN_LATEX_TEMPLATE
-		else
-			try=/etc/writedown/template.tex; [[ -r $try ]] && tmpl=$try
-			try=$R/template.tex;             [[ -r $try ]] && tmpl=$try
-			try=template.tex;                [[ -r $try ]] && tmpl=$try
-			try=views/template.tex;          [[ -r $try ]] && tmpl=$try
-		fi
-		[[ -r $tmpl ]] || {
-			error "Latex template not found ($tmpl)"
-			error "set WRITEDOWN_LATEX_TEMPLATE in config.zsh"
-			error "default: views/template.tex (from $R/template.tex)"
-			return 1 }
-		act "latex template: $tmpl"
+        notice "Configuring pdf/latex output format"
+        if [[ "$WRITEDOWN_LATEX_TEMPLATE" != "" ]] &&
+               [[ -r "$WRITEDOWN_LATEX_TEMPLATE" ]]; then
+            tmpl=$WRITEDOWN_LATEX_TEMPLATE
+        else
+            try=/etc/writedown/template.tex; [[ -r $try ]] && tmpl=$try
+            try=$R/template.tex;             [[ -r $try ]] && tmpl=$try
+            try=template.tex;                [[ -r $try ]] && tmpl=$try
+            try=views/template.tex;          [[ -r $try ]] && tmpl=$try
+        fi
+        [[ -r $tmpl ]] || {
+            error "Latex template not found ($tmpl)"
+            error "set WRITEDOWN_LATEX_TEMPLATE in config.zsh"
+            error "default: views/template.tex (from $R/template.tex)"
+            return 1 }
+        act "latex template: $tmpl"
 
-		x_pandoc+=" --template=$tmpl "
+        x_pandoc+=" --template=$tmpl "
 
-                if [[ "$WRITEDOWN_OUTPUT_FORMAT" = "latex" ]]; then
-                    output_format=latex
-                    output_ext=tex
-		    act "rendering to latex"
+        if [[ "$WRITEDOWN_OUTPUT_FORMAT" = "latex" ]]; then
+            output_format=latex
+            output_ext=tex
+            act "rendering to latex"
 
-		elif [[ "$WRITEDOWN_OUTPUT_FORMAT" = "pdf" ]]; then
-                    output_format=latex
-                    output_ext=pdf
-		    act "rendering to pdf"
-		fi
+        elif [[ "$WRITEDOWN_OUTPUT_FORMAT" = "pdf" ]]; then
+            output_format=latex
+            output_ext=pdf
+            act "rendering to pdf"
+        fi
         ;;
 
-	docx)
-		output_format=docx
-		output_ext=docx
-		;;
+    docx)
+        output_format=docx
+        output_ext=docx
+        ;;
     *)
-		output_format=$WRITEDOWN_OUTPUT_FORMAT
-		output_ext=$WRITEDOWN_OUTPUT_EXTENSION
+        output_format=$WRITEDOWN_OUTPUT_FORMAT
+        output_ext=$WRITEDOWN_OUTPUT_EXTENSION
         ;;
 esac
 
@@ -194,36 +196,35 @@ pagebreak=${WRITEDOWN_PAGEBREAK:-"
 [[ $DEBUG != 0 ]] && zdump
 
 [[ "$section" = "" ]] || {
-	source=""
-	
+    source=""
+
     try="views/${section}.$input_ext"; [[ -r "$try" ]] && source="$try"
     try="views/${section}";            [[ -r "$try" ]] && source="$try"
     try="${section}.$input_ext";       [[ -r "$try" ]] && source="$try"
     try="${section}";                  [[ -r "$try" ]] && source="$try"
-	[[ "$source" = "" ]] && {
-		error "$section not found"
-		return 1 }
+    [[ "$source" = "" ]] && {
+        error "$section not found"
+        return 1 }
     notice "Rendering: $source"
     act "to format $output_format with extension $output_ext"
 
-	ztmp
-	tmpsrc=$ztmpfile
-	correct_extended_chars "$source" $tmpsrc
+    ztmp
+    tmpsrc=$ztmpfile
+    correct_extended_chars "$source" $tmpsrc
 
+    if [[ -d writedown ]]; then  # we are inside a project
+        output="pub/${book_filename}-${section/\//-}.$output_ext"
+    else
+        # writedown called around from outside a project for the
+        # conversion of a single file
+        output="${book_filename}.$output_ext"
+    fi
+    # reset output file
+    [[ -r "$output" ]] && rm -f "$output"
 
-	if [[ -d writedown ]]; then  # we are inside a project
-		output="pub/${book_filename}-${section/\//-}.$output_ext"
-	else
-		# writedown called around from outside a project for the
-		# conversion of a single file
-		output="${book_filename}.$output_ext"
-	fi
-	# reset output file
-	[[ -r "$output" ]] && rm -f "$output"
-
-	act "rendering to $output"
-	func "${=x_pandoc} -t ${output_format} $tmpsrc -o $output"
-          ${=x_pandoc} -t ${output_format} $tmpsrc -o $output
+    act "rendering to $output"
+    func "${=x_pandoc} -t ${output_format} $tmpsrc -o $output"
+    ${=x_pandoc} -t ${output_format} $tmpsrc -o $output
 
     res=$?
     [[ $res != 0 ]] && {
@@ -263,14 +264,14 @@ EOF
 
 [[ -r views/abstract.txt ]] && {
     print "abstract: |\n" >> $frontpage
-	for i in ${(f)"$(cat views/abstract.txt)"}; do
-		## add two spaces before each line, else not valid yml
-		if [[ "$i[2]" != " " ]]; then
-			print "  $i" >> $frontpage
-		else
-			print "$i" >> $frontpage
-		fi
-	done
+    for i in ${(f)"$(cat views/abstract.txt)"}; do
+        ## add two spaces before each line, else not valid yml
+        if [[ "$i[2]" != " " ]]; then
+            print "  $i" >> $frontpage
+        else
+            print "$i" >> $frontpage
+        fi
+    done
 }
 
 cat << EOF >> $frontpage
@@ -290,26 +291,26 @@ views=(`grep -v '^#' views/index.txt`)
     return 1 }
 
 for i in $views; do
-	f="$i"
-	[[ -r "$f" ]] || f="views/$i"
-	[[ -r "$f" ]] || {
-		error "error in views/index.txt"
-		error "file not found: $i"
-		return 1
-	}
+    f="$i"
+    [[ -r "$f" ]] || f="views/$i"
+    [[ -r "$f" ]] || {
+        error "error in views/index.txt"
+        error "file not found: $i"
+        return 1
+    }
     act "rendering file: ::1 path::" $f
-	ztmp
-	dest=$ztmpfile
-	correct_extended_chars $f $dest
+    ztmp
+    dest=$ztmpfile
+    correct_extended_chars $f $dest
 
-	cat <<EOF >> $frontpage
+    cat <<EOF >> $frontpage
 `cat $dest`
 $pagebreak
 EOF
 done
 
 [[ -r $f_bib ]] && {
-	cat <<EOF >> $frontpage
+    cat <<EOF >> $frontpage
 # Bibliography
 
 EOF
@@ -322,10 +323,10 @@ output=${WRITEDOWN_OUTPUT:-pub/$book_filename.$output_ext}
 # render using pandoc
 notice "pandoc-cmd: $x_pandoc  -t $output_format $frontpage -o $output"
 func "$x_pandoc  -t $output_format $frontpage -o $output"
-    ${=x_pandoc} -t $output_format $frontpage -o "$output"
+${=x_pandoc} -t $output_format $frontpage -o "$output"
 
 [[ $? = 0 ]] && {
-	notice "Succesful rendering to file: pub/$book_filename.$output_ext"
-	ls -lh pub/$book_filename.$output_ext
-	file   pub/$book_filename.$output_ext
+    notice "Succesful rendering to file: pub/$book_filename.$output_ext"
+    ls -lh pub/$book_filename.$output_ext
+    file   pub/$book_filename.$output_ext
 }
