@@ -31,6 +31,9 @@ $endif$
 \hypersetup{unicode=true,
             pdftitle={$title$},
             pdfauthor={$author$},
+            $if(keywords)$
+            pdfkeywords={$for(keywords)$$keywords$$sep$; $endfor$},
+            $endif$
             pdfborder={0 0 0},
             breaklinks=true}
 \urlstyle{same}  % don't use monospace font for urls
@@ -144,6 +147,11 @@ $endif$
 \begin{abstract}
 $abstract$
 \end{abstract}
+
+\providecommand{\keywords}[1]{\textbf{\textit{Keywords---}} #1}
+$if(keywords)$
+    \keywords{$for(keywords)$$keywords$$sep$; $endfor$}
+$endif$
 
 \pagebreak[4]
 {

@@ -259,7 +259,7 @@ documentclass: ${book_class}
 fontsize: ${book_fontsize}
 bibliography: ["${f_bib}"]
 csl: $R/citstyle/${book_citationstyle}.csl
-tags: ${book_tags}
+keywords: ${book_tags}
 EOF
 
 [[ -r views/abstract.txt ]] && {
