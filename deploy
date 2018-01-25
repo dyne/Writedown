@@ -1,0 +1,70 @@
+#!/usr/bin/env zsh
+#
+# Copyright (C) 2015-2018 Dyne.org Foundation
+#
+# Designed, written and maintained by Denis Roio <jaromil@dyne.org>
+#
+# This source code is free software; you can redistribute it
+# and/or modify it under the terms of the GNU Public License
+# as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later
+# version.
+#
+# This source code is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+# PURPOSE.  Please refer to the GNU Public License for more
+# details.
+#
+# You should have received a copy of the GNU Public License
+# along with this source code; if not, write to: Free
+# Software Foundation, Inc., 675 Mass Ave, Cambridge, MA
+# 02139, USA.
+
+
+# full path to writedown's system
+[[ -r /usr/local/writedown ]] && R=/usr/local/writedown
+[[ -d writedown ]] && R=`pwd`/writedown
+
+source $R/render source
+
+notice "Deploy PDF to HTML on gh-pages"
+
+[[ -r pub/${book_filename}.pdf ]] || {
+	error "No PDF rendering made: it's needed for conversion to html"
+	error "first run succesfully: ./writedown/render pdf"
+	error "file not found: pub/${book_filename}.pdf"
+	return 1
+}
+
+HEAD=$(git rev-parse HEAD)
+
+ghHEAD=$(git rev-parse --verify gh-pages)
+
+if [[ "$ghHEAD" = "" ]]; then
+
+	act "creating gh-pages branch"
+	git checkout --orphan gh-pages
+	git rm -rf .
+
+else
+	revcheck=$(git show -q ${ghHEAD} | awk '/webnomad deploy/ { print $3 }')
+	[[ "$HEAD" = "$revcheck" ]] && {
+	   warning "revision already deployed: $HEAD"
+	   return 0
+	}
+	git checkout gh-pages
+fi
+
+cp pub/${book_filename}.pdf /tmp
+
+pdf2htmlEX /tmp/${book_filename}.pdf
+
+mv ${book_filename}.html index.html
+git add index.html
+git commit -m "webnomad deploy: ${HEAD}"
+git push origin gh-pages:gh-pages
+
+git co -f master
+
+notice "Success"
