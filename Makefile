@@ -16,6 +16,8 @@ install:
 	@install -d ${DESTDIR}${PREFIX}/zuper
 	@install -p -m 644 zuper/zuper      ${DESTDIR}${PREFIX}/zuper/zuper
 	@install -p -m 644 zuper/zuper.init ${DESTDIR}${PREFIX}/zuper/zuper.init
+	@install -d ${DESTDIR}${PREFIX}/zlibs
+	@install -p -m 644 zlibs/mkdocs	    ${DESTDIR}${PREFIX}/zlibs/mkdocs
 	@install -d ${DESTDIR}${CONFDIR}
 	@install -p -m 644 template.tex ${DESTDIR}${CONFDIR}/template.tex
 	@install -p -m 644 config.zsh   ${DESTDIR}${CONFDIR}/config.zsh

@@ -1,0 +1,55 @@
+#!/usr/bin/env zsh
+
+# support for the web documentation publishing program 'mkdocs' in python
+# needs a recent installed version of mkdocs and the windmill theme
+
+config_to_mkdocs() {
+	[[ -r docs ]] || {
+		ln -s views docs
+		act "created symlink docs/ -> views/"
+	}
+
+	[[ -r mkdocs.yml ]] || {
+		cat <<EOF > mkdocs.yml
+site_name: $book_title
+site_author: $book_author
+repo_url: https://github.com/dyne
+theme: windmill
+pages:
+- "About this book": "index.md"
+EOF
+		for i in ${(f)"$(cat views/index.txt)"}; do
+			print - "- $i" >> mkdocs.yml
+		done
+		act "generated mkdocs.yml configuration"
+	}
+
+	cat <<EOF > views/index.md
+# $book_title
+
+-----
+
+Last updated on $book_date
+
+By: **$book_author**
+
+$book_affiliation
+
+Tags: $book_tags
+
+## Abstract
+
+`cat views/abstract.txt`
+
+## Revision history
+
+`git log`
+
+EOF
+	act "generated views/index.md web documentation cover"
+
+
+	notice "Done! run 'mkdocs' to see available commands"
+	act "views/index.md is the frontpage for the documentation website"
+	act "the configuration in mkdocs.yml can be customised."
+}
