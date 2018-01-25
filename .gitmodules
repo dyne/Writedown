@@ -1,3 +1,6 @@
 [submodule "zuper"]
 	path = zuper
 	url = https://github.com/dyne/zuper
+[submodule "extras/pdf2htmlEX"]
+	path = extras/pdf2htmlEX
+	url = https://github.com/coolwanglu/pdf2htmlEX

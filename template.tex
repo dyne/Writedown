@@ -136,14 +136,26 @@ $endif$
 % START OF CONTENT ------------------------------------------
 
 \title{$title$}
+$if(subtitle)$
+\providecommand{\subtitle}[1]{}
+\subtitle{$subtitle$}
+$endif$
 $if(author)$
 \author{$for(author)$$author$$sep$ \and $endfor$}
 $endif$
+$if(institute)$
+\providecommand{\institute}[1]{}
+\institute{$for(institute)$$institute$$sep$ \and $endfor$}
+$endif$
 \date{$date$}
+$if(logo)$
+\logo{\includegraphics{$logo$}}
+$endif$
 
 \begin{document}
 
 \maketitle
+
 \begin{abstract}
 $abstract$
 \end{abstract}
