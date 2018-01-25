@@ -15,5 +15,6 @@ case `basename $0` in
 	 writedown-doc*)  $R/render docx  "$src" ;;
 	 writedown-latex) $R/render latex "$src" ;;
 	 writedown-tex)   $R/render latex "$src" ;;
+	 writedown-web)   $R/render web   "$src";;
 	 *)               $R/render docx  "$src" ;;
 esac

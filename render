@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 #
-# Copyright (C) 2015-2017 Dyne.org Foundation
+# Copyright (C) 2015-2018 Dyne.org Foundation
 #
 # Designed, written and maintained by Denis Roio <jaromil@dyne.org>
 #
@@ -57,7 +57,10 @@ func "args: $*"
     [[ -r /etc/writedown/config.zsh ]] && \
         WRITEDOWN_CONFIG=/etc/writedown/config.zsh
     [[ -r config.zsh ]] && WRITEDOWN_CONFIG=config.zsh }
-[[ "$WRITEDOWN_CONFIG" = "" ]] || source $WRITEDOWN_CONFIG
+[[ "$WRITEDOWN_CONFIG" = "" ]] || {
+	act "loading config: $WRITEDOWN_CONFIG"
+	source $WRITEDOWN_CONFIG
+}
 
 book_title=${WRITEDOWN_TITLE:-"Writedown Example Book"}
 book_filename=${WRITEDOWN_FILENAME:-${book_title// /_}}
@@ -87,6 +90,8 @@ x_pandoc=${WRITEDOWN_PANDOC:="pandoc --smart --listings --standalone -f $input_f
     x_pandoc+=" --filter pandoc-citeproc --bibliography $f_bib "
     [[ "$book_zotero" = "yes" ]] && x_pandoc+=" --filter pandoc-zotxt "
 }
+
+[[ "$*" = "source" ]] && return 0
 
 WRITEDOWN_OUTPUT_FORMAT=${1:-$WRITEDOWN_OUTPUT_FORMAT}
 [[ "$WRITEDOWN_OUTPUT_FORMAT" = "" ]] && WRITEDOWN_OUTPUT_FORMAT=docx
