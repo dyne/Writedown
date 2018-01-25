@@ -45,7 +45,7 @@ if [[ "$ghHEAD" = "" ]]; then
 
 	act "creating gh-pages branch"
 	git checkout --orphan gh-pages
-	git rm -rf .
+	git reset
 
 else
 	revcheck=$(git show -q ${ghHEAD} | awk '/webnomad deploy/ { print $3 }')
