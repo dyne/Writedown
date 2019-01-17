@@ -16,9 +16,9 @@ WRITEDOWN_CITSTYLE=harvard-kings-college-london
 # font size
 WRITEDOWN_FONTSIZE=14pt
 # bibtex file for bibliographic sources
-WRITEDOWN_BIB=views/references.bib
+# WRITEDOWN_BIB=./views/references.bib
 # latex template (header and footer)
-WRITEDOWN_LATEX_TEMPLATE=views/template.tex
+#WRITEDOWN_LATEX_TEMPLATE=/usr/share/pandoc/data/templates/latex.tex
 
 # different formats as supported by pandoc.
 # to activate uncomment and fill, then use dash (-) as first argument

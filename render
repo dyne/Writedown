@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 #
-# Copyright (C) 2015-2018 Dyne.org Foundation
+# Copyright (C) 2015-2019 Dyne.org Foundation
 #
 # Designed, written and maintained by Denis Roio <jaromil@dyne.org>
 #
@@ -23,11 +23,12 @@
 
 # full path to writedown's system
 [[ -r /usr/local/writedown ]] && R=/usr/local/writedown
-[[ -d writedown ]] && R=`pwd`/writedown
+S=`pwd`
+[[ -d ${S}/writedown ]] && R=${S}/writedown
 
 # this nails invocation to be from inside the project's directory
 
-writedown_version=0.4
+writedown_version=0.5
 writedown_release_date="Aug/2017"
 
 source $R/zuper/zuper
@@ -79,17 +80,18 @@ book_zotero=${WRITEDOWN_ZOTERO:-no}
 
 input_format=${WRITEDOWN_INPUT:-markdown}
 input_ext=${WRITEDOWN_INPUT_EXT:-md}
-f_bib=${WRITEDOWN_BIB:-views/references.bib}
+f_bib=${WRITEDOWN_BIB:-$S/views/references.bib}
 
-x_pandoc=${WRITEDOWN_PANDOC:="pandoc --smart --listings --standalone -f $input_format "}
+x_pandoc=${WRITEDOWN_PANDOC:="pandoc --listings --standalone -f $input_format "}
 
 [[ $DEBUG != 0 ]]   &&  x_pandoc+=" --verbose "
 
 # add bibliographic references to pandoc rendering if file is present
-[[ -r $f_bib ]] && {
+if [[ "$book_zotero" = "yes" ]]; then
+	x_pandoc+=" --filter pandoc-zotxt --filter pandoc-citeproc"
+elif [[ -r $f_bib ]]; then
     x_pandoc+=" --filter pandoc-citeproc --bibliography $f_bib "
-    [[ "$book_zotero" = "yes" ]] && x_pandoc+=" --filter pandoc-zotxt "
-}
+fi
 
 [[ "$*" = "source" ]] && return 0
 
@@ -144,7 +146,7 @@ correct_extended_chars() {
 }
 
 # If you use the --template option it ignores the -H
-# --include-in-header option so we move the inlude into the
+# --include-in-header option so we move the include into the
 # template.tex
 case $WRITEDOWN_OUTPUT_FORMAT in
     pdf|latex)
@@ -155,8 +157,8 @@ case $WRITEDOWN_OUTPUT_FORMAT in
         else
             try=/etc/writedown/template.tex; [[ -r $try ]] && tmpl=$try
             try=$R/template.tex;             [[ -r $try ]] && tmpl=$try
-            try=template.tex;                [[ -r $try ]] && tmpl=$try
-            try=views/template.tex;          [[ -r $try ]] && tmpl=$try
+            try=$S/template.tex;                [[ -r $try ]] && tmpl=$try
+            try=$S/views/template.tex;          [[ -r $try ]] && tmpl=$try
         fi
         [[ -r $tmpl ]] || {
             error "Latex template not found ($tmpl)"
@@ -192,12 +194,6 @@ esac
 # optional second argument, single section (file) to render
 section="$2"
 
-pagebreak=${WRITEDOWN_PAGEBREAK:-"
-
-\pagebreak[4]
-
-"}
-
 [[ $DEBUG != 0 ]] && zdump
 
 [[ "$section" = "" ]] || {
@@ -218,20 +214,21 @@ pagebreak=${WRITEDOWN_PAGEBREAK:-"
     correct_extended_chars "$source" $tmpsrc
 
     if [[ -d writedown ]]; then  # we are inside a project
-        output="pub/${book_filename}-${section/\//-}.$output_ext"
+        output="$S/pub/${book_filename}-${section/\//-}.$output_ext"
     else
         # writedown called around from outside a project for the
         # conversion of a single file
-        output="${book_filename}.$output_ext"
+        output="$S/${book_filename}.$output_ext"
     fi
     # reset output file
     [[ -r "$output" ]] && rm -f "$output"
 
     act "rendering to $output"
+	pushd $S/views
     func "${=x_pandoc} -t ${output_format} $tmpsrc -o $output"
-    ${=x_pandoc} -t ${output_format} $tmpsrc -o $output
-
+    ${=x_pandoc} -t ${output_format} $tmpsrc -o $S/$output
     res=$?
+	popd
     [[ $res != 0 ]] && {
         error "Error in pandoc, returned code: $res"
         return $res
@@ -279,12 +276,6 @@ EOF
     done
 }
 
-cat << EOF >> $frontpage
-
----
-$pagebreak
-EOF
-
 # [[ $DEBUG = 0 ]] || {
 #     notice "Frontpage rendered:"
 #     cat $frontpage
@@ -310,7 +301,6 @@ for i in $views; do
 
     cat <<EOF >> $frontpage
 `cat $dest`
-$pagebreak
 EOF
 done
 
@@ -322,16 +312,18 @@ EOF
 }
 
 # reset output file
-output=${WRITEDOWN_OUTPUT:-pub/$book_filename.$output_ext}
+output=${WRITEDOWN_OUTPUT:-$S/pub/$book_filename.$output_ext}
 [[ -r "$output" ]] && rm -f "$output"
 
 # render using pandoc
 notice "pandoc-cmd: $x_pandoc  -t $output_format $frontpage -o $output"
 func "$x_pandoc  -t $output_format $frontpage -o $output"
+pushd $S/views
 ${=x_pandoc} -t $output_format $frontpage -o "$output"
 
 [[ $? = 0 ]] && {
     notice "Succesful rendering to file: pub/$book_filename.$output_ext"
-    ls -lh pub/$book_filename.$output_ext
-    file   pub/$book_filename.$output_ext
+    ls -lh $S/pub/$book_filename.$output_ext
+    file   $S/pub/$book_filename.$output_ext
 }
+popd
