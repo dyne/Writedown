@@ -5,8 +5,12 @@ import type { CompilationState } from './compiler/service.ts';
 import { editorEvents, mountProjectEditor } from './editor/project-editor.ts';
 import { mountPdfPreview } from './viewer/pdf-preview.ts';
 import { mountOfflineStatus } from './offline/registration.ts';
+import { mountFormulaPreview } from './formula/preview.ts';
+import { katexRenderer } from './formula/katex.ts';
+import { mathJaxRenderer } from './formula/mathjax.ts';
 import './editor/project-editor.css';
 import './viewer/pdf-preview.css';
+import './formula/preview.css';
 import release from '../compiler-release.json';
 import reference from './compiler/reference.tex?raw';
 
@@ -33,6 +37,7 @@ retry.setAttribute('aria-label', 'Retry compilation');
 retry.hidden = true;
 projectCompilation.append(projectStatus, retry);
 const pdfPane = document.createElement('section');
+const formulaPane = document.createElement('section');
 const example = document.createElement('section');
 example.className = 'reference-compiler';
 const exampleTitle = document.createElement('h2');
@@ -163,7 +168,8 @@ compile.addEventListener('click', () => {
   urls.splice(0).forEach(URL.revokeObjectURL);
   compiler.submit(exampleSnapshot);
 });
-const projectEditor = mountProjectEditor(editor, release.id, pdfPane);
+mountFormulaPreview(editor, formulaPane, katexRenderer, mathJaxRenderer);
+const projectEditor = mountProjectEditor(editor, release.id, pdfPane, formulaPane);
 const preview = mountPdfPreview(pdfPane, projectCompilation, projectEditor.sourceJump, projectEditor.currentSource,
   location => editor.dispatchEvent(new CustomEvent(editorEvents.openSource, { detail: location })),
   () => { retry.hidden = false; },

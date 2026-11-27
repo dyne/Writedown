@@ -7,6 +7,19 @@ The editor compiles the current TeX root automatically after 300 ms without
 edits. Its compilation status follows the current revision. Use **Retry
 compilation** after a failed attempt.
 
+Select TeX math in the source to see it in **Formula preview**, with or without
+inline or display delimiters. To share macros across a project's selections,
+add a root-level `formula-macros.tex` with one `\newcommand` definition per line.
+Definitions can take required arguments. This preview uses KaTeX and its local
+fonts. The production build ships their licenses under `notices/`.
+
+Choose **MathJax SVG** in **Formula renderer** to get SVG output from the
+selected fragment. Basic TeX, AMS math, and project macros are available with
+this renderer. The first selection loads the pinned MathJax components and
+TeX font data from `mathjax/4.1.3/`. Keep the choice on KaTeX for the default
+preview. To make SVG available offline, render a formula online first. After
+an offline reload you can select SVG again using the cached components.
+
 Use Node **24.22.3** and npm **11.19.1** (see `.node-version`). Dependencies are
 pinned in `package.json` and `package-lock.json`.
 

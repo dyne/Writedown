@@ -3,6 +3,7 @@ const scope = self.registration.scope;
 const cacheName = `writedown-runtime:${scope}:${manifest.release}:${manifest.build}`;
 const readyKey = new URL('__writedown-ready/' + manifest.build, scope).href;
 const assets = new Map(manifest.files.map(file => [new URL(file.path, scope).href, file]));
+const onDemandAssets = new Map(manifest.onDemand.map(file => [new URL(file.path, scope).href, file]));
 const entryUrl = new URL('index.html', scope).href;
 
 async function tellPages(state, detail) {
@@ -83,7 +84,7 @@ self.addEventListener('message', event => {
   ));
 });
 
-async function serve(url, file) {
+async function serve(url, file, required) {
   let cache;
   try {
     cache = await caches.open(cacheName);
@@ -97,6 +98,7 @@ async function serve(url, file) {
     cache ??= await caches.open(cacheName);
     await save(cache, url, response.clone(), file.path);
   } catch {
+    if (!required) throw new Error('Could not save optional asset ' + file.path + '.');
     await tellPages('failed', `Could not save offline asset ${file.path}.`);
   }
   return response;
@@ -105,10 +107,11 @@ async function serve(url, file) {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = event.request.url === scope ? entryUrl : event.request.url;
-  const file = assets.get(url);
+  const required = assets.has(url);
+  const file = assets.get(url) ?? onDemandAssets.get(url);
   if (!file) return;
-  event.respondWith(serve(url, file).catch(async error => {
-    await tellPages('failed', error.message);
+  event.respondWith(serve(url, file, required).catch(async error => {
+    if (required) await tellPages('failed', error.message);
     return new Response(error.message, { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   }));
 });

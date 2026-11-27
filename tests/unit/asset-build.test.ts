@@ -5,6 +5,7 @@ import { join, relative, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { release } from '../../scripts/assets.ts';
+import { mathJaxAssetPaths } from '../../scripts/mathjax-assets.ts';
 
 test('production build ships only pinned compiler bytes despite public staging, backup and unlisted leftovers', { timeout: 90_000 }, async () => {
   const parent = resolve(process.env.WRITEDOWN_ASSET_TEST_OUTPUT ?? 'test-results');
@@ -60,14 +61,17 @@ test('production build ships only pinned compiler bytes despite public staging, 
   const manifest = JSON.parse(worker.split('\n')[0].slice('const manifest = '.length, -1));
   assert.equal(manifest.release, release.id);
   const cachedPaths = allOutput.map(path => relative(join(fixture, 'dist'), path)).filter(path => path !== 'service-worker.js').sort();
-  assert.deepEqual(manifest.files.map((file: { path: string }) => file.path).sort(), cachedPaths);
-  for (const file of manifest.files) {
+  const optionalPaths = manifest.onDemand.map((file: { path: string }) => file.path).sort();
+  assert.deepEqual(optionalPaths, [...mathJaxAssetPaths].sort());
+  const requiredPaths = cachedPaths.filter(path => !optionalPaths.includes(path));
+  assert.deepEqual(manifest.files.map((file: { path: string }) => file.path).sort(), requiredPaths);
+  for (const file of [...manifest.files, ...manifest.onDemand]) {
     const bytes = await readFile(join(fixture, 'dist', file.path));
     assert.equal(file.bytes, bytes.length);
     assert.equal(file.sha256, createHash('sha256').update(bytes).digest('hex'));
   }
   await writeFile(join(fixture, 'proof.json'), JSON.stringify({
     command: 'npm run build', cwd: fixture, exit: code, leftovers, emitted,
-    validatedFiles: release.files.length, offlineAssets: cachedPaths,
+    validatedFiles: release.files.length, offlineAssets: requiredPaths, optionalPaths,
   }, null, 2));
 });

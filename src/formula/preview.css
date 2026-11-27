@@ -1,0 +1,41 @@
+.formula-preview {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
+  min-inline-size: 0;
+  padding: 0.65rem 1rem;
+  border-block-start: 1px solid var(--line);
+}
+
+.formula-preview h2,
+.formula-preview p { margin: 0; }
+.formula-preview h2 { font-size: 1rem; }
+.formula-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  inline-size: 100%;
+}
+.formula-status, .formula-help p { color: var(--muted); overflow-wrap: anywhere; }
+.formula-status:empty { position: absolute; }
+.formula-error { color: var(--danger); }
+.formula-help { min-inline-size: 0; max-inline-size: 100%; }
+.formula-help summary { color: var(--accent); }
+.formula-help p { margin-block-start: 0.4rem; }
+
+.formula-result {
+  inline-size: 100%;
+  padding: 0.6rem 0.75rem;
+  overflow: auto;
+  background: var(--panel);
+  border-radius: 0.25rem;
+}
+
+.formula-result .katex-display { margin: 0; min-inline-size: max-content; }
+.formula-result mjx-container[display="true"] { display: block; text-align: center; min-inline-size: max-content; }
+
+@media (max-width: 36rem) {
+  .formula-preview { padding-inline: 0.6rem; }
+}

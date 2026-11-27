@@ -37,7 +37,7 @@ function setOptions(select: HTMLSelectElement, names: string[], selected: string
   select.disabled = names.length === 0;
 }
 
-export function mountProjectEditor(pane: HTMLElement, releaseId: string, preview: HTMLElement) {
+export function mountProjectEditor(pane: HTMLElement, releaseId: string, pdf: HTMLElement, formula: HTMLElement) {
   pane.className = 'project-editor';
   pane.innerHTML = `
     <fieldset class="editor-access" disabled>
@@ -124,7 +124,8 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string, preview
         </div>
       </div>
     </fieldset>`;
-  pane.querySelector('.editor-layout')!.append(preview);
+  pane.querySelector('.editor-layout')!.append(pdf);
+  pane.querySelector('.editor-main')!.append(formula);
 
   const find = <T extends HTMLElement>(id: string) => pane.querySelector<T>(`#${id}`)!;
   const access = pane.querySelector<HTMLFieldSetElement>('fieldset')!;
