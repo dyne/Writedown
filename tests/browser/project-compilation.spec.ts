@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
 import type { Page, TestInfo } from '@playwright/test';
 import { execFile } from 'node:child_process';
-import { readdir, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import release from '../../compiler-release.json' with { type: 'json' };
 import { createCompilationRequest } from '../../src/compiler/contracts.ts';
 import { createProjectSnapshot } from '../../src/project/snapshot.ts';
-import type { BibliographyMode, TextFile } from '../../src/project/snapshot.ts';
+import type { BibliographyMode, TexEngine, TextFile } from '../../src/project/snapshot.ts';
 import { startStaticServer } from '../support/static-server.ts';
 
 const run = promisify(execFile);
@@ -26,6 +26,7 @@ type Job = {
   files: FileFixture[];
   projectId?: string;
   bibliography?: BibliographyMode;
+  engine?: TexEngine;
 };
 
 async function compileJobs(page: Page, testInfo: TestInfo, jobs: Job[]) {
@@ -36,10 +37,17 @@ async function compileJobs(page: Page, testInfo: TestInfo, jobs: Job[]) {
   page.on('worker', worker => workerUrls.push(worker.url()));
   try {
     await page.goto(server.url);
+    for (const job of jobs) {
+      for (const file of job.files) {
+        const path = testInfo.outputPath('sources', job.name, file.path);
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, file.kind === 'text' ? file.text : Buffer.from(file.data));
+      }
+    }
     const requests = jobs.map((job, index) => {
       const snapshot = createProjectSnapshot({
         projectId: job.projectId ?? 'paper', revision: index + 1, entryPath: entry, releaseId: release.id,
-        engine: 'pdflatex', bibliography: job.bibliography ?? 'none',
+        engine: job.engine ?? 'pdflatex', bibliography: job.bibliography ?? 'none',
         files: job.files.map(file => file.kind === 'text' ? file : { ...file, bytes: Uint8Array.from(file.data) }),
       });
       const request = createCompilationRequest(snapshot, { workerGeneration: 1, jobId: job.name });
@@ -60,6 +68,8 @@ async function compileJobs(page: Page, testInfo: TestInfo, jobs: Job[]) {
             diagnostics: result.diagnostics,
             reason: result.status === 'failure' ? result.reason : null,
             pdf: result.status === 'success' ? Array.from(new Uint8Array(await result.pdf.arrayBuffer())) : null,
+            syncTex: result.status === 'success' && result.syncTex
+              ? Array.from(new Uint8Array(await result.syncTex.arrayBuffer())) : null,
           });
         }
         return results;
@@ -74,9 +84,10 @@ async function compileJobs(page: Page, testInfo: TestInfo, jobs: Job[]) {
 
     const evidence = [];
     for (const result of results) {
-      const { pdf, ...metadata } = result;
+      const { pdf, syncTex, ...metadata } = result;
       const name = metadata.attempt.jobId;
       await writeFile(testInfo.outputPath(name + '-result.json'), JSON.stringify(metadata, null, 2));
+      if (syncTex) await writeFile(testInfo.outputPath(name + '.synctex.gz'), Buffer.from(syncTex));
       let text = '';
       if (pdf) {
         const path = testInfo.outputPath(name + '.pdf');
@@ -85,7 +96,7 @@ async function compileJobs(page: Page, testInfo: TestInfo, jobs: Job[]) {
         await writeFile(testInfo.outputPath(name + '-pdf.txt'), text);
       }
       const tools = result.passLogs.map(pass => pass.tool.split(' ')[0]);
-      for (const pass of result.passLogs.filter(pass => pass.tool.startsWith('pdflatex '))) {
+      for (const pass of result.passLogs.filter(pass => /^(pdflatex|xelatex) /.test(pass.tool))) {
         expect(pass.tool.split(' ')).toContain('--no-shell-escape');
       }
       evidence.push({ ...metadata, text, tools });
@@ -241,6 +252,72 @@ test('the basic production release reports unavailable Biber assets without fall
   expect(requests.some(request =>
     /\/compiler\//.test(request.path) && !request.headers.referer?.endsWith('/service-worker.js'),
   )).toBe(false);
+});
+
+test('production XeLaTeX embeds a project font and reports an unavailable explicit font', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const projectFont = await readFile('node_modules/pdfjs-dist/standard_fonts/LiberationSans-Regular.ttf');
+  const project = document(
+    String.raw`\fixturefont Project font marker.`,
+    String.raw`\font\fixturefont="[./fonts/project-font.ttf]" at 10pt`,
+  );
+  const unavailable = document(
+    String.raw`\fixturefont Unavailable font marker.`,
+    String.raw`\font\fixturefont="[./fonts/UnavailableFixtureFont.ttf]" at 10pt`,
+  );
+  const { results: [provided, missing], workerUrls } = await compileJobs(page, testInfo, [
+    {
+      name: 'project-font', engine: 'xelatex',
+      files: [
+        source(entry, project),
+        { kind: 'binary', path: 'paper/fonts/project-font.ttf', data: [...projectFont] },
+      ],
+    },
+    { name: 'unavailable-font', engine: 'xelatex', files: [source(entry, unavailable)] },
+  ]);
+
+  expect(workerUrls.filter(url => url.endsWith('/busytex_worker.js'))).toHaveLength(1);
+  expect(provided.status, provided.reason ?? undefined).toBe('success');
+  expect(provided.text).toContain('Project font marker.');
+  const { stdout: fonts } = await run('pdffonts', [testInfo.outputPath('project-font.pdf')]);
+  await writeFile(testInfo.outputPath('project-font-fonts.txt'), fonts);
+  expect(fonts).toMatch(/^\w{6}\+LiberationSans(?:-[^\s]+)?\s+CID TrueType\s+Identity-H\s+yes\s+yes/m);
+
+  expect(missing.status).toBe('failure');
+  expect(missing.text).toBe('');
+  expect(missing.tools[0]).toBe('xelatex');
+  expect(missing.diagnostics).toEqual(expect.arrayContaining([
+    expect.objectContaining({ severity: 'error', path: entry, message: expect.stringContaining('UnavailableFixtureFont.ttf') }),
+  ]));
+});
+
+test('production pdfLaTeX reports font substitution and cannot produce an external command result', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const substituted = document(String.raw`{\fontfamily{writedownmissing}\selectfont Font substitution marker.}`);
+  const external = document(String.raw`\immediate\write18{echo external marker > external-result.tex}
+\IfFileExists{external-result.tex}
+  {\input{external-result.tex}}
+  {\PackageError{fixture}{External command output unavailable}{This document requires an external command.}}`);
+  const { results: [fallback, blocked], workerUrls } = await compileJobs(page, testInfo, [
+    { name: 'substituted-font', files: [source(entry, substituted)] },
+    { name: 'external-tool', files: [source(entry, external)] },
+  ]);
+
+  expect(workerUrls.filter(url => url.endsWith('/busytex_worker.js'))).toHaveLength(1);
+  expect(fallback.status, fallback.reason ?? undefined).toBe('success');
+  expect(fallback.text).toContain('Font substitution marker.');
+  expect(fallback.passLogs.at(-1)?.text).toContain('Some font shapes were not available, defaults substituted.');
+  const { stdout: fonts } = await run('pdffonts', [testInfo.outputPath('substituted-font.pdf')]);
+  await writeFile(testInfo.outputPath('substituted-font-fonts.txt'), fonts);
+  expect(fonts).toMatch(/^\w{6}\+CMR10\s+Type 1\s+Builtin\s+yes\s+yes/m);
+
+  expect(blocked.status).toBe('failure');
+  expect(blocked.text).toBe('');
+  expect(blocked.tools[0]).toBe('pdflatex');
+  expect(blocked.passLogs.at(-1)?.text).toContain('runsystem(echo external marker > external-result.tex)...disabled.');
+  expect(blocked.diagnostics).toEqual(expect.arrayContaining([
+    expect.objectContaining({ severity: 'error', path: entry, message: expect.stringContaining('External command output unavailable') }),
+  ]));
 });
 
 test('the adapter discards a worker after a malformed figure traps the engine', async ({ page }, testInfo) => {

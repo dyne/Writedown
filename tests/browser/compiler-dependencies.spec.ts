@@ -1,8 +1,8 @@
 import { test as base, expect } from '@playwright/test';
 import type { JSHandle, Page, TestInfo } from '@playwright/test';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import release from '../../compiler-release.json' with { type: 'json' };
 import { prepareDependencies } from '../../scripts/prepare-dependencies.ts';
@@ -113,6 +113,11 @@ async function compile(
   entryPath = 'paper/main.tex', files: (typeof projectStyle)[] = [],
 ) {
   const textFiles = [{ kind: 'text' as const, path: entryPath, text: source }, ...files];
+  for (const file of textFiles) {
+    const path = testInfo.outputPath('sources', job, file.path);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, file.text);
+  }
   const request = createCompilationRequest(createProjectSnapshot({
     projectId: 'dependency-test', revision: 1, entryPath, releaseId: release.id,
     engine: 'pdflatex', bibliography: 'none',
@@ -124,9 +129,12 @@ async function compile(
       status: result.status, diagnostics: result.diagnostics, passLogs: result.passLogs,
       reason: result.status === 'failure' ? result.reason : null,
       pdf: result.status === 'success' ? Array.from(new Uint8Array(await result.pdf.arrayBuffer())) : null,
+      syncTex: result.status === 'success' && result.syncTex
+        ? Array.from(new Uint8Array(await result.syncTex.arrayBuffer())) : null,
     };
   }, { ...request, snapshot: { ...request.snapshot, files: textFiles } });
-  const { pdf, ...metadata } = result;
+  const { pdf, syncTex, ...metadata } = result;
+  if (syncTex) await writeFile(testInfo.outputPath(job + '.synctex.gz'), Buffer.from(syncTex));
   await writeFile(testInfo.outputPath(job + '-result.json'), JSON.stringify(metadata, null, 2));
   return { ...metadata, text: pdf ? await extractPdf(testInfo, job, pdf) : '' };
 }

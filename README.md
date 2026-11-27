@@ -46,8 +46,60 @@ same smoke assertion to fail on its 404. The original `dist/` remains available.
 
 Use `WRITEDOWN_TEST_OUTPUT=/absolute/path` for retained browser artifacts; by
 default they go to ignored `test-results/`. `npm run test:browser` requires an
-existing prepared build. `npm run dev` serves development source. Deploy the files in
-`dist/` under `/writedown/` on a static host with JavaScript MIME types.
+existing prepared build. `npm run dev` serves development source.
+
+## Serve the production build
+
+Run `npm ci`, `npm run assets:prepare`, and `npm run build` from the checkout.
+To try the resulting `dist/` locally, run the suite's plain static server and
+open the printed loopback URL.
+
+```sh
+node --input-type=module -e 'import { startStaticServer } from "./tests/support/static-server.ts"; console.log((await startStaticServer("dist")).url)'
+```
+
+On a static host, mount the complete contents of `dist/` at `/writedown/`.
+Use HTTPS for service-worker registration on public hosts. Keep
+`index.html` and `service-worker.js` at the mount root, bundled modules and
+PDF.js files under `assets/`, and the worker script, WASM and TeX preload
+under `compiler/busytex-1.4.1-basic/`. The optional formula renderer uses
+`mathjax/4.1.3/`; redistribution notices are under `notices/`. Return a 404
+for missing assets so that the browser can report the failed file.
+
+| Files | Content type |
+| --- | --- |
+| `.html` | `text/html` |
+| `.js`, `.mjs`, including service and dedicated workers | `text/javascript` |
+| `.css` | `text/css` |
+| `.wasm` | `application/wasm` |
+| `.data` and optional dependency payloads | `application/octet-stream` |
+| `.woff2`, `.ttf`, `.otf` | `font/woff2`, `font/ttf`, `font/otf` |
+
+For the optional package endpoint, set `VITE_TEX_DEPENDENCY_ENDPOINT` before
+building and follow the publishing and CORS instructions in
+[Optional TeX dependency endpoint](#optional-tex-dependency-endpoint). To warm
+the offline cache, open the deployed URL while online and wait for **Offline
+access is ready**. Compile a project that uses each required optional package
+once while online. If you use MathJax SVG, render a selection once as well.
+Then reload or reopen the same URL offline.
+
+The full check includes four `static-session` cases at 1280×800 and 390×844,
+each at 100% and 200% text size. They cover a chapter and BibTeX edit, the
+formula pane, PDF-to-source navigation, an error and repair, then a reload
+and fresh PDF with both servers stopped. The tests retain screenshots of the
+repaired revision, PDFs, SyncTeX sidecars and actual request logs. To repeat
+just this journey after building, use the same Chrome setting as the full check.
+
+```sh
+WRITEDOWN_BROWSER_EXECUTABLE=/usr/bin/google-chrome \
+WRITEDOWN_TEST_OUTPUT="$PWD/test-results/static-session" \
+npm run test:browser -- static-session
+```
+
+See the [compatibility matrix](docs/compatibility.md) for the compiler and
+fixture pins, observed support and native comparison recipe.
+
+## Compiler assets
 
 `compiler-release.json` pins wrapper **texlyre-busytex 1.4.1** and the matching
 **assets-v1.4.1** archive by URL, GitHub release/asset IDs, sizes and SHA-256

@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { execFile } from 'node:child_process';
-import { cp, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import release from '../../compiler-release.json' with { type: 'json' };
 import { createCompilationRequest } from '../../src/compiler/contracts.ts';
@@ -64,6 +64,11 @@ for (const engine of ['pdflatex', 'xelatex', 'lualatex'] as const) {
       return route.abort();
     });
     try {
+      for (const file of fixture.files) {
+        const path = testInfo.outputPath('sources', file.path);
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, file.text);
+      }
       const request = createCompilationRequest(createProjectSnapshot({
         projectId: 'engine-proof', revision: 1, entryPath: fixture.entry,
         engine, bibliography: 'none', releaseId: release.id, files: fixture.files,
