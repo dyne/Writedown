@@ -90,3 +90,56 @@ test('Markdown uses the local PDF pipeline, diagnostics, and source navigation',
     await server.close();
   }
 });
+
+test('a nested TeX root can switch to Markdown on every engine and still include local TeX', async ({ page }) => {
+  test.setTimeout(120_000);
+  const server = await startStaticServer(resolve('dist'));
+  try {
+    await page.goto(server.url);
+    await expect(page.getByRole('combobox', { name: 'Project', exact: true })).toBeEnabled();
+    const files = page.getByRole('combobox', { name: 'File', exact: true });
+    const format = page.getByRole('combobox', { name: 'Input format' });
+    const source = page.getByRole('textbox', { name: 'Source code' });
+    const engine = page.getByRole('combobox', { name: 'Engine' });
+    const pdfText = page.locator('.pdf-text');
+    const root = 'paper/main.tex';
+    const include = 'paper/writedown-preview.tex';
+    const marker = pdfText.getByText('Included chapter marker.', { exact: true });
+
+    for (const [path, text] of [
+      [root, latex],
+      [include, '% Included chapter\nIncluded chapter marker.\\par'],
+    ]) {
+      await page.getByText('New source file', { exact: true }).press('Enter');
+      await page.getByRole('textbox', { name: 'File path' }).fill(path);
+      await page.getByRole('button', { name: 'Create file' }).press('Enter');
+      await source.fill(text);
+    }
+    await expect(page.getByRole('combobox', { name: 'Root document' })).toHaveValue(root);
+    await files.selectOption(root);
+    await expect(format).toHaveValue('latex');
+    await expect(pdfText).toContainText('Switched format marker.', { timeout: 60_000 });
+
+    await format.selectOption('markdown');
+    await expect(source).toHaveValue(latex);
+    for (const [value, heading] of [
+      ['pdflatex', 'PDF engine notes'],
+      ['xelatex', 'Xe engine notes'],
+      ['lualatex', 'Lua engine notes'],
+    ]) {
+      await engine.selectOption(value);
+      await source.fill(`# ${heading}\n\n<math>x^2</math>\n\n<latex>\n\\input{writedown-preview.tex}\n</latex>`);
+      await expect(pdfText).toContainText(heading, { timeout: 30_000 });
+      await expect(marker).toBeVisible();
+    }
+
+    await marker.dblclick();
+    await expect(files).toHaveValue(include);
+    await expect(format).toHaveValue('latex');
+    await expect(page.getByRole('spinbutton', { name: 'Line', exact: true })).toHaveValue('2');
+    await files.selectOption(root);
+    await expect(format).toHaveValue('markdown');
+  } finally {
+    await server.close();
+  }
+});
