@@ -69,6 +69,7 @@ export function mountSourceNavigation({
     announce('Reading source locations…');
     try {
       const parsed = await readSyncTex(syncTex, {
+        ...pathMap,
         resolve(name) {
           const path = pathMap.resolve(name);
           return path && files.has(path) ? path : undefined;

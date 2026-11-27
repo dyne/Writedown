@@ -1,5 +1,6 @@
 import type { LogEntry } from 'texlyre-busytex';
 import type { Diagnostic } from './contracts.ts';
+import { sourceLine } from './paths.ts';
 import type { CompilerPathMap } from './paths.ts';
 
 const texTools = new Set(['pdflatex', 'xelatex', 'luahblatex', 'lualatex']);
@@ -22,7 +23,8 @@ function readTeXDiagnostics(text: string, paths: CompilerPathMap): Diagnostic[] 
     const errorLine = line.match(/^l\.(\d+)\b/)?.[1];
     if (errorLine && pendingError) {
       const { index, path } = pendingError;
-      if (path) diagnostics[index] = { ...diagnostics[index], path, line: Number(errorLine) };
+      const mappedLine = path ? sourceLine(paths, path, Number(errorLine)) : undefined;
+      if (mappedLine !== undefined) diagnostics[index] = { ...diagnostics[index], path, line: mappedLine };
       pendingError = undefined;
       continue;
     }
@@ -30,8 +32,9 @@ function readTeXDiagnostics(text: string, paths: CompilerPathMap): Diagnostic[] 
     if (warning) {
       const lineNumber = warning.match(/\bon input line (\d+)\b/)?.[1];
       const path = activeFile();
-      diagnostics.push(path && lineNumber
-        ? { severity: 'warning', message: warning, path, line: Number(lineNumber) }
+      const mappedLine = path && lineNumber ? sourceLine(paths, path, Number(lineNumber)) : undefined;
+      diagnostics.push(mappedLine !== undefined
+        ? { severity: 'warning', message: warning, path, line: mappedLine }
         : { severity: 'warning', message: warning });
       continue;
     }

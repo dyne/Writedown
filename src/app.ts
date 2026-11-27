@@ -28,7 +28,7 @@ const projectCompilation = document.createElement('div');
 projectCompilation.className = 'project-compiler';
 const projectStatus = document.createElement('p');
 projectStatus.id = 'project-compile-status';
-projectStatus.textContent = 'Choose a TeX source to compile.';
+projectStatus.textContent = 'Choose a source document to compile.';
 projectStatus.setAttribute('aria-live', 'polite');
 const retry = document.createElement('button');
 retry.type = 'button';
@@ -105,7 +105,7 @@ function presentProject(state: CompilationState) {
   retry.setAttribute('aria-label', retryCache ? 'Retry dependency cache' : 'Retry compilation');
   if (state.status === 'idle') {
     delete projectStatus.dataset.revision;
-    projectStatus.textContent = 'Choose a TeX source to compile.';
+    projectStatus.textContent = 'Choose a source document to compile.';
     return;
   }
   const revision = state.snapshot.revision;

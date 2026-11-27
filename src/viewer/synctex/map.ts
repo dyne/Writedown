@@ -1,3 +1,4 @@
+import { sourceLine } from '../../compiler/paths.ts';
 import type { CompilerPathMap } from '../../compiler/paths.ts';
 
 interface SourceTag {
@@ -212,7 +213,8 @@ export function parseSyncTex(text: string, paths: CompilerPathMap): SyncTexMap |
   const offsetY = postY ?? yOffset * baseUnit;
   return indexRegions(raw.flatMap(({ tag, line, page, left, right, top, bottom }) => {
     const path = input.get(tag);
-    return path ? [{ path, line, page, left: left * scale + offsetX, right: right * scale + offsetX,
+    const mappedLine = path ? sourceLine(paths, path, line) : undefined;
+    return path && mappedLine !== undefined ? [{ path, line: mappedLine, page, left: left * scale + offsetX, right: right * scale + offsetX,
       top: top * scale + offsetY, bottom: bottom * scale + offsetY }] : [];
   }));
 }

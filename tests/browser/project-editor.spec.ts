@@ -51,7 +51,7 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
         const source = page.getByRole('textbox', { name: 'Source code' });
         await expect(projectChoice).toHaveValue('Untitled project');
         await expect(projectChoice).toBeEnabled();
-        await expect(page.locator('#source-empty')).toHaveText('Create a .tex or .bib file, or import your sources.');
+        await expect(page.locator('#source-empty')).toHaveText('Create a .tex, .md, or .bib file, or import your sources.');
 
         await page.getByText('New project', { exact: true }).press('Enter');
         await page.getByRole('textbox', { name: 'Project name' }).fill(name);
@@ -144,7 +144,7 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
         const tabOrder = [
           'new-project', 'new-project-name', 'create-project', 'file-choice', 'import-files', 'import-folder',
           'new-file', 'new-file-path', 'create-file', 'root-choice', 'engine-choice', 'bibliography-choice',
-          'source-line', 'go-to-line', 'source-text', 'save-project',
+          'source-format', 'source-line', 'go-to-line', 'source-text', 'save-project',
         ];
         for (const id of tabOrder) {
           await page.keyboard.press('Tab');

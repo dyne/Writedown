@@ -67,6 +67,12 @@ export default defineConfig(({ command }) => ({
         for (const [name, sourcePath] of [
           ['katex-MIT.txt', 'node_modules/katex/LICENSE'],
           ['katex-fonts-OFL.txt', 'src/formula/fonts-OFL.txt'],
+          ['markdown-it-MIT.txt', 'node_modules/markdown-it/LICENSE'],
+          ['entities-BSD-2-Clause.txt', 'node_modules/entities/LICENSE'],
+          ['linkify-it-MIT.txt', 'node_modules/linkify-it/LICENSE'],
+          ['mdurl-MIT.txt', 'node_modules/mdurl/LICENSE'],
+          ['punycode.js-MIT.txt', 'node_modules/punycode.js/LICENSE-MIT.txt'],
+          ['uc.micro-MIT.txt', 'node_modules/uc.micro/LICENSE.txt'],
         ]) {
           const path = 'notices/' + name;
           const source = await readFile(join(import.meta.dirname, sourcePath));

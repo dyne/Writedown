@@ -30,6 +30,7 @@ test('restores project revisions and original binary bytes on reload', async ({ 
       projectId: 'first', entryPath: '.\\main.tex', releaseId: 'release-a', files: [
         { kind: 'text', path: 'main.tex', text: 'Project one' },
         { kind: 'binary', path: 'img//figure.png', bytes },
+        { kind: 'binary', path: 'notes.md', bytes: new Blob(['# Old notes']) },
       ],
     });
     const two = WorkingProject.create(storage, {
@@ -55,7 +56,7 @@ test('restores project revisions and original binary bytes on reload', async ({ 
     const figure = one.snapshot.files[1];
     if (figure.kind !== 'binary') throw new Error('Binary figure was not restored');
     return {
-      first: { ...one.snapshot, files: [one.snapshot.files[0]] }, second: two.snapshot,
+      first: { ...one.snapshot, files: [one.snapshot.files[0], one.snapshot.files[2]] }, second: two.snapshot,
       figure: { path: figure.path, bytes: [...new Uint8Array(await figure.bytes.arrayBuffer())] },
       frozen: Object.isFrozen(one.snapshot) && Object.isFrozen(one.snapshot.files) && Object.isFrozen(figure),
       savedRevisions: [one.savedRevision, two.savedRevision],
@@ -64,7 +65,10 @@ test('restores project revisions and original binary bytes on reload', async ({ 
   expect(saved).toEqual({
     first: {
       projectId: 'first', revision: 2, entryPath: 'main.tex', engine: 'xelatex', bibliography: 'bibtex', releaseId: 'release-c',
-      files: [{ kind: 'text', path: 'main.tex', text: 'Project one' }],
+      files: [
+        { kind: 'text', path: 'main.tex', text: 'Project one' },
+        { kind: 'text', path: 'notes.md', text: '# Old notes' },
+      ],
     },
     second: {
       projectId: 'second', revision: 1, entryPath: 'main.tex', engine: 'lualatex', bibliography: 'bibtex', releaseId: 'release-b',

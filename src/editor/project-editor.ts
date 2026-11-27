@@ -1,6 +1,6 @@
 import { IndexedDbProjectStorage, WorkingProject } from '../project/store.ts';
-import { normalizeProjectPath } from '../project/snapshot.ts';
-import type { ProjectFile, ProjectSnapshot, TexEngine } from '../project/snapshot.ts';
+import { isDocumentPath, normalizeProjectPath, sourceFormat } from '../project/snapshot.ts';
+import type { ProjectFile, ProjectSnapshot, SourceFormat, TexEngine } from '../project/snapshot.ts';
 
 export interface SourceLocation {
   readonly path: string;
@@ -26,8 +26,8 @@ export const editorEvents = {
   openSource: 'writedown:open-source',
 } as const;
 
-const isTex = (path: string) => /\.tex$/i.test(path);
-const isTextSource = (path: string) => /\.(?:tex|bib|sty|cls|bst|def|cfg|ltx|txt)$/i.test(path);
+const isTextSource = (path: string) => isDocumentPath(path) || /\.(?:bib|sty|cls|bst|def|cfg|ltx|txt)$/i.test(path);
+const emptySource = 'Create a .tex, .md, or .bib file, or import your sources.';
 const initialProjectId = 'Untitled project';
 
 function setOptions(select: HTMLSelectElement, names: string[], selected: string, empty: string) {
@@ -79,7 +79,7 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string, pdf: HT
           <div class="editor-settings">
             <div class="editor-field">
               <label for="root-choice">Root document</label>
-              <select id="root-choice"><option>No .tex files</option></select>
+              <select id="root-choice"><option>No source documents</option></select>
             </div>
             <div class="editor-field">
               <label for="engine-choice">Engine</label>
@@ -104,15 +104,25 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string, pdf: HT
           <div class="editor-document">
             <header class="editor-document-header">
               <h2 id="source-path">Source</h2>
+              <div id="source-format-field" class="editor-format" hidden>
+                <label for="source-format">Input format</label>
+                <select id="source-format">
+                  <option value="latex">LaTeX</option>
+                  <option value="markdown">Markdown</option>
+                </select>
+              </div>
               <form id="source-jump" class="editor-jump">
                 <label for="source-line">Line</label>
                 <input id="source-line" type="number" min="1" step="1" value="1" required />
                 <button id="go-to-line" type="submit">Go to line</button>
               </form>
             </header>
+            <p id="markdown-source-help" class="editor-markdown-help" hidden>
+              Use <code>&lt;math&gt;…&lt;/math&gt;</code> for formulas and <code>&lt;latex&gt;…&lt;/latex&gt;</code> for raw LaTeX.
+            </p>
             <label class="visually-hidden" for="source-text">Source code</label>
             <textarea id="source-text" autocomplete="off" autocapitalize="off" spellcheck="false" wrap="off" hidden></textarea>
-            <p id="source-empty" class="editor-empty">Create a .tex or .bib file, or import your sources.</p>
+            <p id="source-empty" class="editor-empty">${emptySource}</p>
           </div>
           <footer class="editor-save">
             <p id="project-save-status" aria-live="polite">Opening local projects…</p>
@@ -138,6 +148,9 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string, pdf: HT
   const filePath = find<HTMLInputElement>('new-file-path');
   const source = find<HTMLTextAreaElement>('source-text');
   const sourcePath = find('source-path');
+  const formatField = find('source-format-field');
+  const formatChoice = find<HTMLSelectElement>('source-format');
+  const markdownHelp = find('markdown-source-help');
   const sourceLine = find<HTMLInputElement>('source-line');
   const sourceEmpty = find('source-empty');
   const goToLine = find<HTMLButtonElement>('go-to-line');
@@ -175,6 +188,14 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string, pdf: HT
     emit<SourceSelection | null>(editorEvents.selection, text ? { projectId, revision, path: activeFile, text } : null);
   }
 
+  function showFormat(format?: SourceFormat) {
+    formatField.hidden = !format;
+    formatChoice.value = format ?? 'latex';
+    markdownHelp.hidden = format !== 'markdown';
+    if (markdownHelp.hidden) formatChoice.removeAttribute('aria-describedby');
+    else formatChoice.setAttribute('aria-describedby', markdownHelp.id);
+  }
+
   function showFile(path: string) {
     activeFile = path;
     fileChoice.value = path;
@@ -182,7 +203,8 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string, pdf: HT
     sourcePath.textContent = file?.path ?? 'Source';
     source.hidden = file?.kind !== 'text';
     sourceEmpty.hidden = !source.hidden;
-    sourceEmpty.textContent = file ? 'Binary file included in the project.' : 'Create a .tex or .bib file, or import your sources.';
+    sourceEmpty.textContent = file ? 'Binary file included in the project.' : emptySource;
+    showFormat(file?.kind === 'text' && isDocumentPath(file.path) ? sourceFormat(file) : undefined);
     source.value = file?.kind === 'text' ? file.text : '';
     source.setSelectionRange(0, 0);
     source.scrollTop = 0;
@@ -196,7 +218,8 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string, pdf: HT
     setOptions(projectChoice, projectIds, snapshot.projectId, 'No local projects');
     const paths = snapshot.files.map(file => file.path).sort();
     setOptions(fileChoice, paths, preferredFile, 'No files');
-    setOptions(rootChoice, paths.filter(isTex), snapshot.entryPath, 'No .tex files');
+    const documents = snapshot.files.filter(file => file.kind === 'text' && isDocumentPath(file.path));
+    setOptions(rootChoice, documents.map(file => file.path).sort(), snapshot.entryPath, 'No source documents');
     engineChoice.value = snapshot.engine;
     bibliographyChoice.value = snapshot.bibliography;
     renderRelease(snapshot);
@@ -276,8 +299,10 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string, pdf: HT
 
   function addFiles(files: ProjectFile[], preferredFile: string) {
     const snapshot = project.snapshot;
-    const existingRoot = snapshot.files.some(file => file.path === snapshot.entryPath);
-    const entryPath = existingRoot ? snapshot.entryPath : files.find(file => file.kind === 'text' && isTex(file.path))?.path ?? snapshot.entryPath;
+    const existingRoot = snapshot.files.some(file => file.kind === 'text' && file.path === snapshot.entryPath);
+    const documents = files.filter(file => file.kind === 'text' && isDocumentPath(file.path));
+    const importedRoot = documents.find(file => /\.tex$/i.test(file.path)) ?? documents[0];
+    const entryPath = existingRoot ? snapshot.entryPath : importedRoot?.path ?? snapshot.entryPath;
     update({ files: [...snapshot.files, ...files], entryPath });
     render(preferredFile);
   }
@@ -311,7 +336,7 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string, pdf: HT
     event.preventDefault();
     try {
       const path = normalizeProjectPath(filePath.value);
-      if (!/\.(?:tex|bib)$/i.test(path)) throw new Error('Use a .tex or .bib file extension.');
+      if (!isDocumentPath(path) && !/\.bib$/i.test(path)) throw new Error('Use a .tex, .md, .markdown, or .bib file extension.');
       addFiles([{ kind: 'text', path, text: '' }], path);
       filePath.value = '';
       filePath.closest('details')!.open = false;
@@ -343,6 +368,14 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string, pdf: HT
   rootChoice.addEventListener('change', () => update({ entryPath: rootChoice.value }));
   engineChoice.addEventListener('change', () => update({ engine: engineChoice.value as TexEngine }));
   bibliographyChoice.addEventListener('change', () => update({ bibliography: bibliographyChoice.value === 'bibtex' ? 'bibtex' : 'none' }));
+  formatChoice.addEventListener('change', () => {
+    if (formatField.hidden) return;
+    const format: SourceFormat = formatChoice.value === 'markdown' ? 'markdown' : 'latex';
+    const files = project.snapshot.files.map(file => file.path === activeFile && file.kind === 'text' ? { ...file, format } : file);
+    update({ files });
+    showFormat(format);
+    publishSelection();
+  });
   switchRelease.addEventListener('click', () => {
     if (project.snapshot.releaseId !== releaseId) update({ releaseId });
   });
