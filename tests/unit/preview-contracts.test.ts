@@ -54,7 +54,7 @@ test('submission identifies retries and worker replacement at the same revision'
   assert.notDeepEqual(first.attempt, retry.attempt);
   assert.notDeepEqual(first.attempt, replacement.attempt);
   assert.deepEqual(first.attempt, {
-    projectId: 'project-a', revision: 3, releaseId: 'release-a', workerGeneration: 1, jobId: 'job-1',
+    projectId: 'project-a', revision: 3, engine: 'pdflatex', releaseId: 'release-a', workerGeneration: 1, jobId: 'job-1',
   });
   assert.equal(first.snapshot, snapshot);
   assert.ok(Object.isFrozen(first));

@@ -1,9 +1,11 @@
-import type { ProjectSnapshot } from '../project/snapshot.ts';
+import type { ProjectSnapshot, TexEngine } from '../project/snapshot.ts';
+import type { CompilerPathMap } from './paths.ts';
 
 /** A job ID is unique within a worker generation, including retries. */
 export interface CompilationAttempt {
   readonly projectId: string;
   readonly revision: number;
+  readonly engine: TexEngine;
   readonly releaseId: string;
   readonly workerGeneration: number;
   readonly jobId: string;
@@ -23,6 +25,7 @@ export function createCompilationRequest(
     attempt: Object.freeze({
       projectId: snapshot.projectId,
       revision: snapshot.revision,
+      engine: snapshot.engine,
       releaseId: snapshot.releaseId,
       workerGeneration: submission.workerGeneration,
       jobId: submission.jobId,
@@ -50,6 +53,8 @@ interface CompilationOutcome {
   readonly attempt: CompilationAttempt;
   readonly diagnostics: readonly Diagnostic[];
   readonly passLogs: readonly PassLog[];
+  /** Paths for this attempt, including the directory of its selected entry. */
+  readonly pathMap?: CompilerPathMap;
 }
 
 export interface CompilationSuccess extends CompilationOutcome {
@@ -62,10 +67,18 @@ export interface CompilationSuccess extends CompilationOutcome {
 export interface CompilationFailure extends CompilationOutcome {
   readonly status: 'failure';
   readonly reason: string;
+  /** The compiler session must be replaced before another job. */
+  readonly workerFailed?: true;
 }
 
 export type CompilationResult = CompilationSuccess | CompilationFailure;
 
 export interface ProjectCompiler {
   compile(request: CompilationRequest): Promise<CompilationResult>;
+}
+
+export interface ResidentProjectCompiler extends ProjectCompiler {
+  initialize(): Promise<void>;
+  isReady(): boolean;
+  terminate(): void;
 }

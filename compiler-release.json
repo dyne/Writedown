@@ -249,10 +249,20 @@
     "engineMode": "combined",
     "preload": "texlive-basic.js",
     "dependencyLookups": false,
-    "testedTools": [
-      "pdflatex"
+    "testedEngines": [
+      "pdflatex",
+      "xelatex",
+      "lualatex"
     ],
-    "otherAppletVersions": "Reported by the combined engine at initialization; not compilation-qualified in L1.",
+    "testedTools": [
+      "pdflatex",
+      "xelatex",
+      "xdvipdfmx",
+      "luahblatex",
+      "bibtex8",
+      "makeindex"
+    ],
+    "otherAppletVersions": "Reported by the combined engine at initialization; only the listed tools have passed compilation fixtures.",
     "formats": [
       "/texlive/texmf-dist/texmf-var/web2c/luahbtex/luahblatex.fmt",
       "/texlive/texmf-dist/texmf-var/web2c/pdftex/pdflatex.fmt",
@@ -606,7 +616,10 @@
       "yax"
     ],
     "fontFileCount": 3557,
-    "testedFont": "/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb",
+    "testedFonts": [
+      "/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb",
+      "/texlive/texmf-dist/fonts/opentype/public/lm/lmsans10-regular.otf"
+    ],
     "fileAndFontInventory": "texlive-basic.txt",
     "packageInventory": "texlive-basic.js.providespackage.txt",
     "notices": [
@@ -615,6 +628,6 @@
       "LICENSE.CTAN",
       "versions.txt"
     ],
-    "limitations": "Only the basic preload is shipped. Recommended/extra data and biber binaries are omitted. Only pdfLaTeX without bibliography is qualified by the reference fixture."
+    "limitations": "Only the basic preload is shipped. Recommended/extra data and standalone Biber assets are omitted. A pdfLaTeX fixture exercises BibTeX and a separate fixture exercises MakeIndex."
   }
 }
