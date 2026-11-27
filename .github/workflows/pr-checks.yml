@@ -1,0 +1,55 @@
+name: PR checks
+
+on: pull_request
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: npm run check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install npm and project dependencies
+        run: |
+          npm install --global "$(node -p 'require("./package.json").packageManager')"
+          npm ci
+
+      - name: Install browser and PDF tools
+        run: |
+          ./node_modules/.bin/playwright install --with-deps chromium
+          sudo apt-get install --yes --no-install-recommends poppler-utils
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/compiler
+          key: compiler-archive-${{ hashFiles('compiler-release.json') }}
+
+      - name: Prepare verified compiler assets
+        run: npm run assets:prepare
+
+      - name: Typecheck, build, and test
+        run: npm run check
+
+      - name: Upload browser test results on failure
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
