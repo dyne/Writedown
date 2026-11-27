@@ -1,0 +1,145 @@
+.pdf-preview {
+  min-inline-size: 0;
+  align-self: start;
+  grid-column: 1 / -1;
+  border-block-start: 1px solid var(--line);
+}
+
+.pdf-preview-header { padding: 0.8rem 1rem; }
+.pdf-preview-header h2 { font-size: 1rem; margin: 0 0 0.35rem; }
+.pdf-preview-header p { margin: 0; overflow-wrap: anywhere; }
+#pdf-revision { color: var(--accent); font-weight: 650; font-variant-numeric: tabular-nums; }
+#pdf-revision[data-state="stale"], .pdf-preview .preview-error, .diagnostic-error strong { color: var(--danger); }
+#pdf-message { color: var(--muted); }
+.pdf-preview #pdf-message.preview-error { color: var(--danger); }
+
+.pdf-controls, .pdf-page-turn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+}
+.pdf-controls { margin-block-start: 0.55rem; }
+.pdf-page-turn { flex-wrap: nowrap; min-inline-size: 0; }
+.pdf-page-turn button {
+  display: inline-grid;
+  place-items: center;
+  inline-size: max(44px, 1.65em);
+  padding-inline: 0;
+  flex: none;
+}
+.pdf-page-turn button[aria-disabled="true"] { opacity: 0.7; cursor: default; border-color: var(--line); }
+.pdf-page-turn button::before {
+  content: '';
+  width: 0.6em;
+  height: 0.6em;
+  border-inline-end: 0.12em solid currentColor;
+  border-block-start: 0.12em solid currentColor;
+  transform: rotate(45deg);
+}
+#pdf-previous::before { transform: rotate(-135deg); }
+
+#pdf-page-number { font-variant-numeric: tabular-nums; }
+.pdf-preview-header #pdf-sync-status { color: var(--muted); margin-block-start: 0.45rem; }
+#pdf-open-source[aria-disabled="true"], #show-in-pdf[aria-disabled="true"] {
+  opacity: 0.7;
+  cursor: default;
+  border-color: var(--line);
+}
+
+.pdf-diagnostics { margin-block-start: 0.4rem; }
+.pdf-diagnostics ul { margin: 0.45rem 0; padding-inline-start: 1.25em; overflow-wrap: anywhere; }
+.pdf-diagnostics ul:has(> li:only-child) { padding-inline-start: 0; }
+.pdf-diagnostics li:only-child::marker { content: ''; }
+.pdf-diagnostics li + li { margin-block-start: 0.35rem; }
+.pdf-diagnostics summary { color: var(--accent); overflow-wrap: anywhere; }
+.pdf-diagnostics summary:hover { text-decoration: underline; text-underline-offset: 0.16em; }
+.pdf-source-link {
+  display: block;
+  padding-inline: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+.pdf-pass-logs h3 { font: 650 0.875rem/1.45 ui-monospace, monospace; overflow-wrap: anywhere; }
+.pdf-pass-logs pre {
+  max-block-size: 14rem;
+  padding: 0.5rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: auto;
+  background: var(--panel);
+}
+
+.pdf-scroll {
+  max-block-size: min(70vh, 52rem);
+  padding-inline: 0.7rem;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.pdf-scroll:has(.pdf-page) {
+  background: var(--panel);
+  border-block-start: 1px solid var(--line);
+  padding-block: 0.7rem;
+}
+
+.pdf-scroll:focus-visible { outline-offset: -3px; }
+
+.pdf-page {
+  margin-inline: auto;
+  position: relative;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(23 41 35 / 0.2);
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+}
+.pdf-page canvas { display: block; width: 100%; height: 100%; }
+.pdf-source-highlight {
+  position: absolute;
+  pointer-events: none;
+  outline: 1px solid #17614e;
+  background: rgb(114 185 143 / 0.36);
+}
+
+/* PDF.js TextLayer positioning, adapted from its Apache-2.0 viewer CSS. */
+.pdf-text {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  transform-origin: 0 0;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size, 1));
+}
+.pdf-text :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height, 0px));
+  transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1)) scale(calc(1 / var(--min-font-size, 1)));
+}
+.pdf-text ::selection { color: transparent; background: rgb(23 97 78 / 0.35); }
+.pdf-text[data-main-rotation="90"] { transform: rotate(90deg) translateY(-100%); }
+.pdf-text[data-main-rotation="180"] { transform: rotate(180deg) translate(-100%, -100%); }
+.pdf-text[data-main-rotation="270"] { transform: rotate(270deg) translateX(-100%); }
+
+@media (min-width: 73rem) {
+  .editor-layout:has(.pdf-preview) { grid-template-columns: minmax(10rem, 13rem) minmax(0, 0.91fr) minmax(0, 1.09fr); }
+  .pdf-preview {
+    grid-column: auto;
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 36rem) {
+  .pdf-preview-header { padding: 0.54rem 0.6rem; }
+  .pdf-page-turn { column-gap: 0.35rem; }
+}

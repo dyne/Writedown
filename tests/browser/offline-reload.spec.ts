@@ -31,6 +31,7 @@ const repository = resolve('.');
 const dependency = dependencyFiles.find(file => file.name === 'booktabs.sty')!;
 const upgradeRelease = 'busytex-1.4.1-upgrade-fixture';
 const entry = 'PrivateOfflineEntry57413.tex';
+const pdfWorkerAsset = /\/writedown\/assets\/pdf\.worker\.min-[^/]+\.mjs$/;
 const document = (marker: string) => String.raw`\documentclass{article}
 \usepackage{booktabs}
 \begin{document}
@@ -194,6 +195,8 @@ async function proofPdf(page: Page, info: TestInfo, name: string, latest: string
   const revision = await page.evaluate(() => window.offlineProof.snapshot?.revision);
   expect(revision).toBeGreaterThan(0);
   await expect(page.locator('#project-compile-status')).toContainText(`Revision ${revision} compiled.`, { timeout: 45_000 });
+  await expect(page.locator('#pdf-revision')).toHaveText(`PDF revision ${revision} · Current`, { timeout: 30_000 });
+  await expect(page.locator('.pdf-text')).toContainText(latest);
   const result = await page.evaluate(async () => {
     const result = window.offlineProof.settled;
     if (result?.status !== 'success') throw new Error('Expected the PDF for the current project revision.');
@@ -228,6 +231,13 @@ async function waitForOffline(page: Page, url: string, id = release.id) {
   const runtime = state.caches.find(cache => cache.name.startsWith('writedown-runtime:') && cache.name.includes(`:${id}:`));
   expect(runtime?.paths.some(path => path.startsWith('/writedown/__writedown-ready/'))).toBe(true);
   expect(runtime?.paths).toContain('/writedown/index.html');
+  expect(runtime?.paths).toEqual(expect.arrayContaining([
+    expect.stringMatching(pdfWorkerAsset),
+    expect.stringMatching(/\/assets\/pdfjs-[^/]+\/cmaps\/UniJIS-UTF16-H\.bcmap$/),
+    expect.stringMatching(/\/assets\/pdfjs-[^/]+\/standard_fonts\/LiberationSans-Regular\.ttf$/),
+    expect.stringMatching(/\/assets\/pdfjs-[^/]+\/wasm\/openjpeg\.wasm$/),
+    expect.stringMatching(/\/assets\/pdfjs-[^/]+\/iccs\/CGATS001Compat-v2-micro\.icc$/),
+  ]));
   expect(runtime?.paths).toContain(`/writedown/compiler/${id}/texlive-basic.data`);
   return state;
 }
@@ -282,7 +292,10 @@ test('offline reload compiles an edited cached dependency in a fresh worker and 
   await expect(offline.page.getByRole('textbox', { name: 'Source code' })).toHaveValue(document(before));
   await editSource(offline.page, after);
   await proofPdf(offline.page, info, 'edited-offline', after, before);
-  expect(offline.workers).toEqual([new URL(`compiler/${release.id}/busytex_worker.js`, url).href]);
+  expect(offline.workers).toEqual([
+    new URL(`compiler/${release.id}/busytex_worker.js`, url).href,
+    expect.stringMatching(pdfWorkerAsset),
+  ]);
   expect(await offline.page.evaluate(() => window.offlineProof.deletedWrapperCache)).toBe(1);
   await expect.poll(() => wrapperCacheFiles(offline.page)).toEqual([expect.stringMatching(/\/texlive-basic\.data$/)]);
   await writeFile(info.outputPath('verified-cache-inventory.json'), JSON.stringify({ warm, rebuilt: await cacheState(offline.page) }, null, 2));
@@ -363,7 +376,10 @@ test('an interrupted release installation leaves the prior release usable offlin
   await editSource(oldOffline.page, editedMarker);
   const oldResult = await proofPdf(oldOffline.page, info, 'prior-offline-edited', editedMarker, initialMarker);
   expect(oldResult.attempt.releaseId).toBe(release.id);
-  expect(oldOffline.workers).toEqual([new URL(`compiler/${release.id}/busytex_worker.js`, url).href]);
+  expect(oldOffline.workers).toEqual([
+    new URL(`compiler/${release.id}/busytex_worker.js`, url).href,
+    expect.stringMatching(pdfWorkerAsset),
+  ]);
 
   expect((await lab.serveStatic(candidate)).url).toBe(url);
   const newPackages = await lab.servePackages(upgradeRelease);

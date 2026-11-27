@@ -132,6 +132,7 @@ button:active:not(:disabled) { background: var(--select); }
 }
 
 .editor-jump { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.editor-save-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
 .editor-jump input { inline-size: 4rem; }
 .editor-empty { color: var(--muted); margin: 0; padding: 1rem; min-block-size: 6rem; }
 

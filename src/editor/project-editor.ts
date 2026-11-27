@@ -7,6 +7,11 @@ export interface SourceLocation {
   readonly line: number;
 }
 
+export interface ProjectSourceLocation extends SourceLocation {
+  readonly projectId: string;
+  readonly revision: number;
+}
+
 export interface SourceSelection {
   readonly projectId: string;
   readonly revision: number;
@@ -32,7 +37,7 @@ function setOptions(select: HTMLSelectElement, names: string[], selected: string
   select.disabled = names.length === 0;
 }
 
-export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
+export function mountProjectEditor(pane: HTMLElement, releaseId: string, preview: HTMLElement) {
   pane.className = 'project-editor';
   pane.innerHTML = `
     <fieldset class="editor-access" disabled>
@@ -111,11 +116,15 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
           </div>
           <footer class="editor-save">
             <p id="project-save-status" aria-live="polite">Opening local projects…</p>
-            <button id="save-project" type="button">Save now</button>
+            <div class="editor-save-actions">
+              <button id="save-project" type="button">Save now</button>
+              <button id="show-in-pdf" type="button" aria-describedby="pdf-sync-status">Show in PDF</button>
+            </div>
           </footer>
         </div>
       </div>
     </fieldset>`;
+  pane.querySelector('.editor-layout')!.append(preview);
 
   const find = <T extends HTMLElement>(id: string) => pane.querySelector<T>(`#${id}`)!;
   const access = pane.querySelector<HTMLFieldSetElement>('fieldset')!;
@@ -131,6 +140,7 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
   const sourceLine = find<HTMLInputElement>('source-line');
   const sourceEmpty = find('source-empty');
   const goToLine = find<HTMLButtonElement>('go-to-line');
+  const sourceJump = find<HTMLButtonElement>('show-in-pdf');
   const status = find('project-save-status');
   const releaseNotice = find('compiler-release-notice');
   const releaseStatus = find('compiler-release-status');
@@ -176,7 +186,7 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
     source.setSelectionRange(0, 0);
     source.scrollTop = 0;
     sourceLine.value = '1';
-    sourceLine.disabled = goToLine.disabled = source.hidden;
+    sourceJump.disabled = sourceLine.disabled = goToLine.disabled = source.hidden;
     publishSelection();
   }
 
@@ -273,6 +283,8 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
 
   projectChoice.addEventListener('change', () => {
     const nextId = projectChoice.value;
+    // Keep the displayed project named until the saved replacement opens.
+    projectChoice.value = project.snapshot.projectId;
     void runAction(async () => {
       if (project.snapshot.revision !== project.savedRevision) await saveCurrent();
       const next = await WorkingProject.open(storage, nextId);
@@ -361,4 +373,14 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
       setStatus(`Could not open local storage. ${errorMessage(error)} Use Save now to retry.`, true);
     }
   });
+
+  return {
+    sourceJump,
+    currentSource(): ProjectSourceLocation | undefined {
+      if (busy || source.hidden) return undefined;
+      const { projectId, revision } = project.snapshot;
+      const line = source.value.slice(0, source.selectionStart).split('\n').length;
+      return { projectId, revision, path: activeFile, line };
+    },
+  };
 }

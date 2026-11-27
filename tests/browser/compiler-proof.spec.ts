@@ -30,7 +30,8 @@ test(`production worker compiles reference PDF and SyncTeX ${viewport.width}x${v
     }, scale);
     await page.goto(server.url);
     await page.getByRole('button', { name: 'Compile example', exact: true }).click();
-    await expect(page.getByRole('status')).toHaveText('Example compiled successfully.', { timeout: 100_000 });
+    const status = page.locator('.reference-compiler').getByRole('status');
+    await expect(status).toHaveText('Example compiled successfully.', { timeout: 100_000 });
     expect(workers).toContain(new URL(`compiler/${release.id}/busytex_worker.js`, server.url).href);
     expect(errors).toEqual([]);
     expect(requests.every(url => new URL(url).origin === new URL(server.url).origin)).toBe(true);

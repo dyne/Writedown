@@ -3,8 +3,10 @@ import type { ProjectSnapshot } from './project/snapshot.ts';
 import { CompilationService } from './compiler/service.ts';
 import type { CompilationState } from './compiler/service.ts';
 import { editorEvents, mountProjectEditor } from './editor/project-editor.ts';
+import { mountPdfPreview } from './viewer/pdf-preview.ts';
 import { mountOfflineStatus } from './offline/registration.ts';
 import './editor/project-editor.css';
+import './viewer/pdf-preview.css';
 import release from '../compiler-release.json';
 import reference from './compiler/reference.tex?raw';
 
@@ -26,9 +28,11 @@ projectStatus.textContent = 'Choose a TeX source to compile.';
 projectStatus.setAttribute('aria-live', 'polite');
 const retry = document.createElement('button');
 retry.type = 'button';
-retry.textContent = 'Retry compilation';
+retry.textContent = 'Retry';
+retry.setAttribute('aria-label', 'Retry compilation');
 retry.hidden = true;
 projectCompilation.append(projectStatus, retry);
+const pdfPane = document.createElement('section');
 const example = document.createElement('section');
 example.className = 'reference-compiler';
 const exampleTitle = document.createElement('h2');
@@ -91,8 +95,9 @@ function presentProject(state: CompilationState) {
   const unavailable = state.status !== 'idle' && state.snapshot.releaseId !== release.id;
   projectStatus.hidden = unavailable;
   retry.hidden = unavailable || state.status !== 'settled' || (state.result.status === 'success' && !cacheWarning);
-  retry.textContent = cacheWarning && state.status === 'settled' && state.result.status === 'success'
-    ? 'Retry dependency cache' : 'Retry compilation';
+  const retryCache = cacheWarning && state.status === 'settled' && state.result.status === 'success';
+  retry.textContent = retryCache ? 'Retry cache' : 'Retry';
+  retry.setAttribute('aria-label', retryCache ? 'Retry dependency cache' : 'Retry compilation');
   if (state.status === 'idle') {
     delete projectStatus.dataset.revision;
     projectStatus.textContent = 'Choose a TeX source to compile.';
@@ -104,9 +109,14 @@ function presentProject(state: CompilationState) {
   if (state.status === 'initializing') projectStatus.textContent = `Starting the compiler for revision ${revision}…`;
   if (state.status === 'compiling') projectStatus.textContent = `Compiling revision ${revision}…`;
   if (state.status === 'settled') {
-    projectStatus.textContent = state.result.status === 'success'
-      ? `Revision ${revision} compiled.${cacheWarning ? ' ' + cacheWarning.message : ''}`
-      : `Revision ${revision} failed. ${state.result.reason}`;
+    const { result } = state;
+    if (result.status === 'success') {
+      projectStatus.textContent = `Revision ${revision} compiled.${cacheWarning ? ' ' + cacheWarning.message : ''}`;
+    } else {
+      const shownWithSource = result.diagnostics.some(item =>
+        item.message === result.reason && item.path !== undefined && item.line !== undefined);
+      projectStatus.textContent = `Revision ${revision} failed.${shownWithSource ? '' : ' ' + result.reason}`;
+    }
   }
 }
 
@@ -129,6 +139,10 @@ const compiler = new CompilationService(async snapshot => {
     }
   } else {
     presentProject(state);
+    if (state.status === 'queued') preview.begin(state.snapshot, state.snapshot.releaseId === release.id);
+    if (state.status === 'settled' && state.snapshot === editorSnapshot && state.snapshot.releaseId === release.id) {
+      preview.present(state.result);
+    }
   }
   app.dispatchEvent(new CustomEvent<CompilationState>('writedown:compilation-state', { detail: state, bubbles: true }));
   if (isExample && state.status === 'settled' && canCompile(editorSnapshot)) compiler.submit(editorSnapshot);
@@ -137,6 +151,7 @@ const compiler = new CompilationService(async snapshot => {
 editor.addEventListener(editorEvents.snapshot, event => {
   const first = editorSnapshot === undefined;
   editorSnapshot = (event as CustomEvent<ProjectSnapshot>).detail;
+  if (!canCompile(editorSnapshot) || (first && compile.disabled)) preview.begin(editorSnapshot, false);
   if (first && compile.disabled) return;
   if (canCompile(editorSnapshot)) compiler.submit(editorSnapshot);
   else compiler.clear();
@@ -148,7 +163,10 @@ compile.addEventListener('click', () => {
   urls.splice(0).forEach(URL.revokeObjectURL);
   compiler.submit(exampleSnapshot);
 });
-mountProjectEditor(editor, release.id);
-editor.append(projectCompilation);
+const projectEditor = mountProjectEditor(editor, release.id, pdfPane);
+const preview = mountPdfPreview(pdfPane, projectCompilation, projectEditor.sourceJump, projectEditor.currentSource,
+  location => editor.dispatchEvent(new CustomEvent(editorEvents.openSource, { detail: location })),
+  () => { retry.hidden = false; },
+);
 mountOfflineStatus(app, import.meta.env.BASE_URL);
 app.dataset.ready = 'true';

@@ -156,7 +156,7 @@ test('compiler release identifies a missing production worker asset', async ({ p
     try {
       await page.goto(server.url);
       await page.getByRole('button', { name: 'Compile example', exact: true }).click();
-      const status = page.getByRole('status');
+      const status = page.locator('.reference-compiler').getByRole('status');
       await expect(status).toContainText('Could not initialize the BusyTeX worker for ' + release.id + ' (busytex_worker.js)');
       await writeFile(testInfo.outputPath('status.txt'), (await status.textContent()) ?? '');
       await expect(page.getByRole('link', { name: 'Download PDF' })).toHaveCount(0);
