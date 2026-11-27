@@ -1,94 +1,206 @@
 # Writedown
 
-A static browser application for local LaTeX projects. **Compile example** builds
-a real pdfLaTeX page in a browser worker and provides its PDF, SyncTeX and pass logs.
-Project inputs and generated outputs stay in the browser.
-The editor compiles the current TeX root automatically after 300 ms without
-edits. Its compilation status follows the current revision. Use **Retry
-compilation** after a failed attempt.
+Writedown is a browser editor for local LaTeX projects. Import a folder,
+choose its root document, and edit with a live PDF preview. The browser stores
+your project and runs TeX in a worker. Source files, logs, and generated PDFs
+stay on your device.
 
-Select TeX math in the source to see it in **Formula preview**, with or without
-inline or display delimiters. To share macros across a project's selections,
-add a root-level `formula-macros.tex` with one `\newcommand` definition per line.
-Definitions can take required arguments. This preview uses KaTeX and its local
-fonts. The production build ships their licenses under `notices/`.
+## Run locally
 
-Choose **MathJax SVG** in **Formula renderer** to get SVG output from the
-selected fragment. Basic TeX, AMS math, and project macros are available with
-this renderer. The first selection loads the pinned MathJax components and
-TeX font data from `mathjax/4.1.3/`. Keep the choice on KaTeX for the default
-preview. To make SVG available offline, render a formula online first. After
-an offline reload you can select SVG again using the cached components.
-
-Use Node **24.22.3** and npm **11.19.1** (see `.node-version`). Dependencies are
-pinned in `package.json` and `package-lock.json`.
-
-Preparation requires `tar`. The verification suite also requires `pdftotext`
-and `pdffonts` (Poppler) and Chrome/Chromium with its operating-system libraries.
-Either provide an existing browser with `WRITEDOWN_BROWSER_EXECUTABLE`, or prepare
-Playwright's matching Chromium once with `npx playwright install --with-deps chromium`
-after `npm ci`. Browser installation is an environment prerequisite, not part of
-the check command. On a machine with Chrome at `/usr/bin/google-chrome`, the
-clean-start command is:
+Use Node **24.22.3** (see [`.node-version`](.node-version)), npm **11.19.1**,
+and `tar`. From the repository root, install the locked dependencies, prepare
+the compiler, and build the app.
 
 ```sh
-npm ci && npm run assets:prepare && WRITEDOWN_BROWSER_EXECUTABLE=/usr/bin/google-chrome npm run check
-```
-
-`npm run check` runs strict TypeScript checking, Node unit tests, a Vite production
-build, then Playwright against that build. The test fixture is a plain Node static
-server mounting `dist/` at `/writedown/`, without a development server or fallback
-HTML for missing assets. It records every incoming request, including worker and
-service-worker requests, and attaches records to the browser result. Four smoke
-cases cover 1280×800 and 390×844 at 100% and 200% text size with local screenshots.
-A negative case removes the compiled entry from a disposable copy and requires the
-same smoke assertion to fail on its 404. The original `dist/` remains available.
-
-Use `WRITEDOWN_TEST_OUTPUT=/absolute/path` for retained browser artifacts; by
-default they go to ignored `test-results/`. `npm run test:browser` requires an
-existing prepared build. `npm run dev` serves development source.
-
-## Serve the production build
-
-Run `npm ci`, `npm run assets:prepare`, and `npm run build` from the checkout.
-To try the resulting `dist/` locally, run the suite's plain static server and
-open the printed loopback URL.
-
-```sh
+npm ci
+npm run assets:prepare
+npm run build
 node --input-type=module -e 'import { startStaticServer } from "./tests/support/static-server.ts"; console.log((await startStaticServer("dist")).url)'
 ```
 
-On a static host, mount the complete contents of `dist/` at `/writedown/`.
-Use HTTPS for service-worker registration on public hosts. Keep
-`index.html` and `service-worker.js` at the mount root, bundled modules and
-PDF.js files under `assets/`, and the worker script, WASM and TeX preload
-under `compiler/busytex-1.4.1-basic/`. The optional formula renderer uses
-`mathjax/4.1.3/`; redistribution notices are under `notices/`. Return a 404
-for missing assets so that the browser can report the failed file.
+Open the loopback URL the server prints. Choose **Compile example** to try
+pdfLaTeX and download its PDF, SyncTeX sidecar, and pass logs. Use
+`npm run dev` to work on the app itself.
+
+## Edit and preview
+
+Import files or a folder, then choose the **Root document**, engine, and
+bibliography mode. The editor compiles after 300 ms without edits. The preview
+keeps the last readable PDF while a revision compiles or fails and shows its
+revision alongside the current diagnostics. Use **Retry** after a failed compile.
+
+Use **Show in PDF** to locate a source line. Double-click a PDF position, or
+use **Open source**, to jump back to its source. These actions need a readable
+SyncTeX sidecar from the current revision.
+
+Select TeX math, with or without inline or display delimiters, to see it in
+**Formula preview**. KaTeX renders the selection independently of the document.
+For project macros, add a root-level `formula-macros.tex` with one
+`\newcommand` definition per line. Definitions can take required arguments.
+
+Choose **MathJax SVG** in **Formula renderer** for SVG output. It supports
+basic TeX, AMS math, and project macros. Selecting it loads the pinned
+MathJax components and TeX font data from `mathjax/4.1.3/`. Render a formula
+online once to use SVG after an offline reload. KaTeX is the default.
+
+## Host the production build
+
+Mount the complete contents of `dist/` at `/writedown/`. Use HTTPS on
+public hosts so the service worker can register. Keep `index.html` and
+`service-worker.js` at the mount root. Serve bundles and PDF.js files from
+`assets/`, and the BusyTeX worker, WASM, and preload from
+`compiler/busytex-1.4.1-basic/`. The build includes redistribution notices
+under `notices/`. Return HTTP 404 for missing assets.
 
 | Files | Content type |
 | --- | --- |
 | `.html` | `text/html` |
-| `.js`, `.mjs`, including service and dedicated workers | `text/javascript` |
+| `.js`, `.mjs`, including workers | `text/javascript` |
 | `.css` | `text/css` |
 | `.wasm` | `application/wasm` |
 | `.data` and optional dependency payloads | `application/octet-stream` |
 | `.woff2`, `.ttf`, `.otf` | `font/woff2`, `font/ttf`, `font/otf` |
 
-For the optional package endpoint, set `VITE_TEX_DEPENDENCY_ENDPOINT` before
-building and follow the publishing and CORS instructions in
-[Optional TeX dependency endpoint](#optional-tex-dependency-endpoint). To warm
-the offline cache, open the deployed URL while online and wait for **Offline
-access is ready**. Compile a project that uses each required optional package
-once while online. If you use MathJax SVG, render a selection once as well.
-Then reload or reopen the same URL offline.
+If your deployment uses the [optional TeX dependency endpoint](#optional-tex-dependency-endpoint),
+configure it before building.
 
-The full check includes four `static-session` cases at 1280×800 and 390×844,
-each at 100% and 200% text size. They cover a chapter and BibTeX edit, the
-formula pane, PDF-to-source navigation, an error and repair, then a reload
-and fresh PDF with both servers stopped. The tests retain screenshots of the
-repaired revision, PDFs, SyncTeX sidecars and actual request logs. To repeat
-just this journey after building, use the same Chrome setting as the full check.
+## Offline access
+
+Open the production app over HTTPS or loopback while online. **Offline access
+is ready** means the service worker controls the page and has verified and
+cached the app shell and compiler files. Compile once with each optional TeX
+package you need. If you use MathJax SVG, render a selection once. You can then
+reopen the same URL offline.
+
+Each update verifies a separate cache before it replaces the active worker.
+Close the open Writedown tabs when the app says the update is ready. An
+interrupted installation leaves the previous build usable. If setup fails,
+restore service or free browser storage, then choose **Retry offline setup**.
+
+The BusyTeX wrapper may clear its own `EM_PRELOAD_CACHE` database when its
+preload version changes. It can rebuild that database offline from the app's
+verified runtime cache. Optional TeX dependencies have a separate cache for
+each compiler release. If a verified dependency compiles online but fails to
+save, **Retry cache** starts a fresh worker for the same project revision.
+
+Projects live in IndexedDB, independently of the caches. If a project is
+pinned to an unavailable compiler release, the editor identifies it and
+offers to switch to the installed release. Switching saves a new revision with
+the same source files.
+
+## Compiler and assets
+
+The [release manifest](compiler-release.json) pins `texlyre-busytex@1.4.1`
+and the matching `assets-v1.4.1` archive by URL, GitHub release and asset IDs,
+sizes, and SHA-256 digests. Asset preparation uses a 521,748,902-byte archive.
+The build ships 128,304,494 bytes of compiler assets plus the app bundles.
+
+The worker starts with the bundled `texlive-basic` preload. Browser fixtures
+exercise pdfLaTeX, XeLaTeX with `xdvipdfmx`, and LuaLaTeX with the
+`luahblatex` applet. The basic release omits Biber. BusyTeX's direct package
+networking and shell escape are disabled. The base inventory lists 7,185
+files, four format dumps, 343 declared package names, and 3,557 font files.
+See which combinations passed and how to reproduce them in the
+[compatibility matrix](docs/compatibility.md). The
+[compiler notices](notices/compiler/) contain the inventories, version inputs,
+and distribution notices. Additional package notices remain in the upstream
+data payload.
+
+Relative inputs resolve from the selected root document. For example, when the
+root is `paper/main.tex`, `\input{chapters/intro.tex}` reads
+`paper/chapters/intro.tex` and `\input{../shared.tex}` reads `shared.tex`
+at the project root. Use a lowercase `.tex` suffix with no earlier `.tex`
+in the basename. The driver's output lookup uses the first literal `.tex`
+in that name.
+
+Each compile gets a fresh writable project filesystem. Its passes share that
+job's auxiliary files. The driver runs TeX, BibTeX if selected, and MakeIndex
+if TeX generates index entries. It can run up to three more TeX passes, followed
+by `xdvipdfmx` for XeLaTeX. A driver sequence is limited to four TeX passes
+and seven tool calls. The driver retains the full log from its last TeX pass
+and output and auxiliary data from earlier passes.
+
+One service serializes worker startup, preloads, and compilation. Editing
+invalidates any result in flight and replaces the pending snapshot. Ordinary
+edits reuse the initialized worker. A change of project, engine, or release
+retires it. Startup has a 180-second deadline, and the complete compile has a
+separate 120-second deadline. After a timeout or worker failure, a later edit
+or manual retry can start another worker from the current snapshot.
+
+When needed, `npm run assets:prepare` downloads the archive into `.cache/compiler/` and
+extracts the pinned files into private staging under `.cache/compiler-staging/`.
+It verifies each file before publishing to `public/compiler/busytex-1.4.1-basic/`.
+It checks file digests on reuse and repairs an incomplete or corrupted release.
+To use a local copy of the exact archive, set
+`WRITEDOWN_ASSET_ARCHIVE=/absolute/file.tar.gz`.
+
+`WRITEDOWN_ASSET_CACHE` and `WRITEDOWN_ASSET_ROOT` override the cache and
+preparation destinations. A custom output root uses private staging inside that
+root so publication stays on the same filesystem. Production builds verify the
+default `public/compiler/` location and emit only the compiler files listed in
+the release manifest. Leftover stages, backups, and unlisted files stay out of
+`dist/`.
+
+## Optional TeX dependency endpoint
+
+The compiler checks project files, the bundled TeX tree, and dependencies
+already loaded in the worker. If TeX reports a missing required style or
+class, the app checks the catalog and its verified cache. The
+[dependency catalog](compiler-dependencies.json) currently approves
+`booktabs.sty`. Unlisted misses stay on the device and appear in diagnostics.
+
+With `VITE_TEX_DEPENDENCY_ENDPOINT` unset or empty, the app uses the bundled
+release and any verified dependencies already in browser storage. To enable
+downloads, set that build-time variable to the endpoint's directory URL before
+running `npm run build`. Use an absolute HTTPS URL without credentials,
+a query, or a fragment. HTTP loopback URLs work for local testing.
+
+After preparing the compiler, generate the endpoint files in a staging
+directory. This command honors `WRITEDOWN_ASSET_ARCHIVE` and
+`WRITEDOWN_ASSET_CACHE`.
+
+```sh
+node scripts/prepare-dependencies.ts /absolute/path/to/dependency-staging
+```
+
+Serve `<release-id>/<sha256>/<filename>` as immutable binary files below the
+configured directory. For a separate origin, allow the app's origin with CORS.
+The browser sends a credential-free GET to the catalog URL and verifies the
+size and SHA-256 before preloading the bytes in the worker. It saves verified
+bytes in release-scoped Cache Storage for future visits. Project paths, source,
+outputs, and arbitrary search misses stay local.
+
+To extend the catalog, review a required style or class from an inventoried
+bundle in the locked archive. Record its packed path, byte count, and SHA-256.
+The preparation command checks the archive and bundle members, reports the
+observed size and digest on a mismatch, and publishes only matching files.
+The extracted `booktabs.sty` retains its LaTeX Project Public License notice.
+
+## Verify a checkout
+
+In addition to Node, npm, and `tar`, the test suite needs Poppler's
+`pdftotext` and `pdffonts`, plus Chrome or Chromium and its system libraries.
+Set `WRITEDOWN_BROWSER_EXECUTABLE` to an installed browser. You can also run
+`npx playwright install --with-deps chromium` after `npm ci` to prepare
+Playwright's Chromium, then leave the executable override unset.
+
+```sh
+npm ci && npm run assets:prepare && WRITEDOWN_BROWSER_EXECUTABLE=/usr/bin/google-chrome npm run check
+```
+
+`npm run check` typechecks, runs unit tests, builds `dist/`, and runs
+Playwright. Production cases use a plain static server at `/writedown/`
+and record page, dedicated-worker, and service-worker traffic. The tests
+cover missing entry assets, interrupted extraction, repair after WASM
+corruption, rejection of truncated archives, and exclusion of staging
+leftovers. Browser fixtures check real worker exits, PDF text, and SyncTeX.
+
+The `static-session` tests cover editing a chapter and bibliography,
+previewing a formula, following a PDF-to-source jump, repairing an error,
+and compiling a new edit offline with both servers stopped. They retain
+screenshots at 1280×800 and 390×844 at 100% and 200% text size, plus PDFs,
+SyncTeX, and request logs. To rerun the journey after building, use the same
+browser setting as for the full suite.
 
 ```sh
 WRITEDOWN_BROWSER_EXECUTABLE=/usr/bin/google-chrome \
@@ -96,143 +208,7 @@ WRITEDOWN_TEST_OUTPUT="$PWD/test-results/static-session" \
 npm run test:browser -- static-session
 ```
 
-See the [compatibility matrix](docs/compatibility.md) for the compiler and
-fixture pins, observed support and native comparison recipe.
-
-## Compiler assets
-
-`compiler-release.json` pins wrapper **texlyre-busytex 1.4.1** and the matching
-**assets-v1.4.1** archive by URL, GitHub release/asset IDs, sizes and SHA-256
-digests. The lockfile pins wrapper integrity. The archive is 521,748,902 bytes;
-the selected static payload is 128,304,494 bytes, plus the application bundles.
-The combined engine starts with the local `texlive-basic` preload. The adapter
-keeps BusyTeX's native dependency networking and shell escape disabled.
-The production worker fixtures qualify pdfLaTeX, XeLaTeX with
-`xdvipdfmx`, and LuaLaTeX with the release's `luahblatex` applet.
-
-The pinned base contains 7,185 files, four format dumps, 343 declared package
-names and 3,557 font files. These are inventory counts, not claims that every
-package or engine has passed a compilation test. The reference exercises the
-article class, pdfLaTeX format and Computer Modern Roman. The XeLaTeX fixture
-loads the pinned Latin Modern Sans OpenType font and checks its embedded PDF
-font name. The complete file/font and package inventories, upstream version
-inputs, wrapper AGPL notice and TeX Live distribution notices are retained in
-[notices/compiler](notices/compiler/).
-Additional package notices remain inside the unchanged upstream data payload.
-
-The worker resolves relative TeX input paths from the selected entry's directory.
-For a root at `paper/main.tex`, `\input{chapters/intro.tex}` reads
-`paper/chapters/intro.tex` and `\input{../shared.tex}` reads `shared.tex` at the
-project root. Compiler results carry the snapshot path map for log locations and
-SyncTeX input records. The pinned driver's artifact names use the first literal
-`.tex` in the entry filename. Use a lowercase `.tex` suffix with no earlier
-`.tex` in the basename.
-
-The driver mounts a fresh writable project filesystem for each complete snapshot.
-All passes of that job share its auxiliary files. The driver runs TeX, then
-BibTeX when selected, then MakeIndex if TeX generated index entries. It runs up
-to three more TeX passes for references and final output, then `xdvipdfmx` for
-XeLaTeX. The bound is four TeX passes and at most seven tool calls in total.
-Final citation and rerun warnings appear alongside raw pass output. The
-driver retains the full TeX log for its last TeX pass and returns output and
-auxiliary data for earlier passes. The basic release lacks the standalone
-Biber payload, so selecting Biber reports which assets are missing.
-
-One service serializes worker initialization, dependency preloading and jobs.
-Edits immediately invalidate publication for the previous revision and replace
-the pending snapshot. An initialized worker is reused for ordinary edits and
-retired on project, engine or release changes. Startup has a 180-second
-deadline and each complete compile has a separate 120-second deadline.
-After a timeout or worker failure, the next eligible revision or a manual
-retry starts another worker using the editor's existing snapshot.
-
-Preparation caches the verified archive in ignored `.cache/compiler/`, extracts
-to private `.cache/compiler-staging/` storage outside the public tree, verifies
-every shipped file, then publishes the full
-set to `public/compiler/busytex-1.4.1-basic/`. Reuse checks all file digests; an
-incomplete or corrupted published set is rebuilt. A local archive supplied with
-`WRITEDOWN_ASSET_ARCHIVE=/absolute/file.tar.gz` must match the pinned bytes.
-`WRITEDOWN_ASSET_CACHE` and `WRITEDOWN_ASSET_ROOT` override preparation locations;
-production builds always verify the normal `public/compiler/` location. For a
-custom publication root, preparation uses private scratch inside that writable
-root. Its parent and the repository cache need no write access, and directory
-renames remain on the target filesystem.
-Production builds disable Vite's recursive public-directory copying and emit
-only descriptor-listed files after checking the exact bytes handed to the
-bundler. Leftover stages, backups and unlisted files cannot enter `dist/`.
-Provisioning downloads the pinned release archive during preparation.
-
-The unit gate interrupts a real extraction after partial data has been written,
-retries it, corrupts a required WASM file and verifies restoration, then rejects
-a truncated archive. A production-build regression seeds staging, backup and
-unlisted leftovers and checks that only the pinned compiler files ship.
-Recovery receipts live under `WRITEDOWN_ASSET_TEST_OUTPUT`
-(default `test-results/`). The browser gate observes the actual compiler worker,
-checks successful pass exits, extracts the saved PDF marker with `pdftotext`,
-and decompresses the matching SyncTeX. It retains those outputs and all requests.
-
-## Optional TeX dependency endpoint
-
-The compiler first tries the project files, the bundled TeX tree and verified
-files already in its resident worker. When TeX reports a required style or
-class missing, the adapter can preload the matching entry from the local
-release cache or obtain it from an optional endpoint. The catalog in
-[`compiler-dependencies.json`](compiler-dependencies.json) approves only
-`booktabs.sty` for this release. Other missing files stay local and appear in
-the compilation diagnostics.
-
-Leave `VITE_TEX_DEPENDENCY_ENDPOINT` unset or empty to use the bundled release
-and any verified dependencies already in browser storage. To enable downloads,
-set the public build-time variable to the endpoint directory URL and run
-`npm run build`. Use an absolute HTTPS URL without credentials, a query or
-a fragment. HTTP loopback URLs work for local testing.
-
-After preparing the compiler, generate the endpoint files in a staging
-directory with the pinned archive. The command honors `WRITEDOWN_ASSET_ARCHIVE`
-and `WRITEDOWN_ASSET_CACHE`.
-
-```sh
-node scripts/prepare-dependencies.ts /absolute/path/to/dependency-staging
-```
-
-Serve the resulting `<release-id>/<sha256>/<filename>` paths as immutable
-binary files under the configured directory. A separate origin must allow
-the app's origin with CORS. The browser issues a credential-free GET to the
-exact catalog URL, verifies the size and SHA-256 before use and stores the
-verified bytes in release-scoped Cache Storage. The worker receives those
-bytes through the pinned preload message. Project paths, source, outputs and
-arbitrary search misses stay on the device.
-
-To extend the catalog, choose a required style or class from an inventoried
-bundle in the same locked archive and record its exact packed path, byte count
-and SHA-256 after reviewing it. The preparation command verifies the archive
-and bundle members, extracts the selected file and reports its observed size
-and digest on a catalog mismatch. It publishes each file only after verifying
-the catalog pin. The extracted booktabs file retains its LaTeX Project Public
-License notice from the TeX Live distribution.
-
-## Offline access
-
-A production build registers a service worker under `/writedown/` on HTTPS
-or a loopback origin. **Offline access is ready** means the worker controls the
-page and has verified and saved the app shell and the pinned compiler files.
-Compile once with each required optional dependency while online so that its
-verified bytes are available on the next visit.
-
-The app-owned runtime cache is keyed by scope, compiler release and build.
-An update verifies a separate set before it can replace the active worker.
-After the update is ready, close the open Writedown tabs to apply it. An
-interrupted installation leaves the previous version usable. Use **Retry
-offline setup** after restoring service or freeing browser storage.
-
-The BusyTeX wrapper tracks its preload version in local storage and can clear
-its own `EM_PRELOAD_CACHE` database when that version changes. The worker can
-rebuild that database offline from the app-owned copy of the verified release.
-Optional dependency bytes are kept in a separate release cache. If a verified
-dependency compiles online but cannot be saved, **Retry dependency cache**
-starts a fresh worker for the same project revision.
-
-Cache repair is independent of the IndexedDB project store. If a saved project
-references a compiler release that the current build cannot run, the editor
-shows the unavailable release and offers an explicit switch to the installed
-one. Switching saves a new revision with the same source files.
+`npm run test:browser` expects an existing production build. Set
+`WRITEDOWN_TEST_OUTPUT` and `WRITEDOWN_ASSET_TEST_OUTPUT` to retain browser
+artifacts and asset-recovery receipts in specific directories. Both default
+to the ignored `test-results/` directory.
