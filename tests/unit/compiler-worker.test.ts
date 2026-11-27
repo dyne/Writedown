@@ -109,3 +109,25 @@ test('a native worker crash rejects the pending compile and removes every callba
   assert.equal(worker.onmessageerror, null);
   oldReply({ data: { pdf: new Uint8Array([1]), exit_code: 0, log: '', logs: [] } });
 });
+
+test('locked worker transport accepts preloaded bytes and rejects a native dependency endpoint', async t => {
+  const { runner, workers } = fixture(t);
+  const starting = runner.initialize();
+  void starting.catch(() => {});
+  await nextTurn();
+  const [worker] = workers;
+  worker.onmessage?.({ data: { initialized: {} } });
+  await starting;
+
+  const tool = new PdfLatex(runner);
+  await assert.rejects(tool.compile({ input: 'document', remoteEndpoint: 'https://dependencies.example' }), /native dependency networking is disabled/);
+  await assert.rejects(tool.compile({ input: 'document', dataPackagesJs: ['https://dependencies.example/package.js'] }), /native dependency networking is disabled/);
+  assert.equal(worker.messages.length, 1);
+  const contents = new Uint8Array([1, 2, 3]);
+  const preloading = runner.preloadDependency('booktabs.sty', contents);
+  assert.deepEqual(worker.messages[1], {
+    write_texlive_remote_files: [{ name: 'booktabs.sty', format: 26, contents }],
+  });
+  worker.onmessage?.({ data: { texlive_remote_written: true } });
+  await preloading;
+});

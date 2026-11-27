@@ -3,6 +3,7 @@ import type { CompileResult, LogEntry } from 'texlyre-busytex';
 
 interface WorkerReply {
   initialized?: Record<string, string>;
+  texlive_remote_written?: true;
   exception?: string;
   pdf?: Uint8Array | null;
   synctex?: Uint8Array | null;
@@ -70,19 +71,31 @@ export class BusyTexWorkerRunner extends BusyTexRunner {
     return this.ready;
   }
 
+  get signal(): AbortSignal {
+    return this.lifetime.signal;
+  }
+
+  async preloadDependency(name: string, contents: Uint8Array): Promise<void> {
+    this.signal.throwIfAborted();
+    if (!this.ready || !this.ownedWorker) throw new Error('BusyTeX worker is not ready.');
+    await this.exchange(this.ownedWorker, {
+      // kpathsea's tex file format, including LaTeX styles and classes.
+      write_texlive_remote_files: [{ name, format: 26, contents }],
+    }, reply => reply.texlive_remote_written === true ? true : undefined);
+  }
+
   override async compile(...[
     files, mainTexPath, bibtex, biber, makeindex, rerun, verbose, driver,
     dataPackages, remoteEndpoint, shellEscape, shellHandlers,
   ]: Parameters<BusyTexRunner['compile']>): Promise<CompileResult> {
-    this.lifetime.signal.throwIfAborted();
+    this.signal.throwIfAborted();
     if (!this.ready || !this.ownedWorker) throw new Error('BusyTeX worker is not ready.');
     if (shellEscape || shellHandlers?.length) throw new Error('BusyTeX shell escape is disabled.');
+    if (remoteEndpoint || dataPackages?.length) throw new Error('BusyTeX native dependency networking is disabled.');
     return this.exchange(this.ownedWorker, {
       files: files.map(file => ({ path: file.path, contents: file.content })),
       main_tex_path: mainTexPath,
       bibtex, biber, makeindex, rerun, verbose, driver,
-      data_packages_js: dataPackages,
-      remote_endpoint: remoteEndpoint,
       shell_escape: false,
     }, reply => {
       if (reply.pdf === undefined) return undefined;

@@ -135,8 +135,11 @@ Replacement project marker.`, String.raw`\IfFileExists{main.bbl}{\PackageError{I
   ]);
   const [first, changed, removed, restored, switched] = run.results;
   expect(run.workerUrls).toHaveLength(1);
-  expect(run.requests.filter(request => request.path.endsWith('/busytex_worker.js'))).toHaveLength(1);
-  expect(run.requests.filter(request => request.path.endsWith('/texlive-basic.data'))).toHaveLength(1);
+  for (const name of ['busytex_worker.js', 'texlive-basic.data']) {
+    const requests = run.requests.filter(request => request.path.endsWith('/' + name));
+    expect(requests.length).toBeGreaterThan(0);
+    expect(requests.filter(request => !request.headers.referer?.endsWith('/service-worker.js')).length).toBeLessThanOrEqual(1);
+  }
   expect(run.requests.every(request => request.status === 200)).toBe(true);
   for (const result of [first, changed, restored]) {
     expect(result.status, result.reason ?? undefined).toBe('success');
@@ -235,7 +238,9 @@ test('the basic production release reports unavailable Biber assets without fall
   expect(result.diagnostics).toEqual([{ severity: 'error', message: result.reason }]);
   expect(result.passLogs).toEqual([]);
   expect(workerUrls).toEqual([]);
-  expect(requests.some(request => /\/compiler\//.test(request.path))).toBe(false);
+  expect(requests.some(request =>
+    /\/compiler\//.test(request.path) && !request.headers.referer?.endsWith('/service-worker.js'),
+  )).toBe(false);
 });
 
 test('the adapter discards a worker after a malformed figure traps the engine', async ({ page }, testInfo) => {

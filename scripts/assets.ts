@@ -16,7 +16,7 @@ async function digest(path: string): Promise<string> {
   return hash.digest('hex');
 }
 
-async function matches(path: string, expected: { bytes: number; sha256: string }): Promise<boolean> {
+export async function matches(path: string, expected: { bytes: number; sha256: string }): Promise<boolean> {
   try { return (await stat(path)).size === expected.bytes && await digest(path) === expected.sha256; }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;

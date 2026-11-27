@@ -11,7 +11,7 @@ test('production build ships only pinned compiler bytes despite public staging, 
   await mkdir(parent, { recursive: true });
   const fixture = await mkdtemp(join(parent, 'asset-build-'));
   const source = resolve('.');
-  for (const path of ['index.html', 'package.json', 'tsconfig.json', 'vite.config.ts', 'compiler-release.json', 'src', 'scripts']) {
+  for (const path of ['index.html', 'package.json', 'tsconfig.json', 'vite.config.ts', 'compiler-release.json', 'compiler-dependencies.json', 'src', 'scripts']) {
     await cp(join(source, path), join(fixture, path), { recursive: true });
   }
   await symlink(join(source, 'node_modules'), join(fixture, 'node_modules'), 'dir');
@@ -56,5 +56,18 @@ test('production build ships only pinned compiler bytes despite public staging, 
   }
   const allOutput = await files(join(fixture, 'dist'));
   assert.equal(allOutput.some(path => path.endsWith('unlisted-public.txt')), false);
-  await writeFile(join(fixture, 'proof.json'), JSON.stringify({ command: 'npm run build', cwd: fixture, exit: code, leftovers, emitted, validatedFiles: release.files.length }, null, 2));
+  const worker = await readFile(join(fixture, 'dist/service-worker.js'), 'utf8');
+  const manifest = JSON.parse(worker.split('\n')[0].slice('const manifest = '.length, -1));
+  assert.equal(manifest.release, release.id);
+  const cachedPaths = allOutput.map(path => relative(join(fixture, 'dist'), path)).filter(path => path !== 'service-worker.js').sort();
+  assert.deepEqual(manifest.files.map((file: { path: string }) => file.path).sort(), cachedPaths);
+  for (const file of manifest.files) {
+    const bytes = await readFile(join(fixture, 'dist', file.path));
+    assert.equal(file.bytes, bytes.length);
+    assert.equal(file.sha256, createHash('sha256').update(bytes).digest('hex'));
+  }
+  await writeFile(join(fixture, 'proof.json'), JSON.stringify({
+    command: 'npm run build', cwd: fixture, exit: code, leftovers, emitted,
+    validatedFiles: release.files.length, offlineAssets: cachedPaths,
+  }, null, 2));
 });

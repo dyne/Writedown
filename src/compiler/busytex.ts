@@ -1,6 +1,8 @@
 import { LuaLatex, PdfLatex, XeLatex } from 'texlyre-busytex';
 import release from '../../compiler-release.json';
 import type { CompilationFailure, CompilationRequest, CompilationResult, Diagnostic, PassLog, ResidentProjectCompiler } from './contracts.ts';
+import { missingTexDependency } from './dependency-catalog.ts';
+import { TexDependencyStore } from './dependency-store.ts';
 import { readCompilationDiagnostics } from './diagnostics.ts';
 import { createCompilerPathMap } from './paths.ts';
 import { BusyTexWorkerRunner } from './worker-runner.ts';
@@ -14,11 +16,14 @@ const missingBiberAssets = ['biber.js', 'biber.wasm', 'biber.data']
 /** One worker with the combined binaries and the local basic preload. */
 export class BusyTexCompiler implements ResidentProjectCompiler {
   private readonly base: string;
+  private readonly dependencies: TexDependencyStore;
+  private readonly dependencyWarnings = new Map<string, Diagnostic>();
   private runner: BusyTexWorkerRunner | undefined;
   private disposed = false;
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, dependencyEndpoint?: string) {
     this.base = baseUrl;
+    this.dependencies = new TexDependencyStore(baseUrl, dependencyEndpoint);
   }
 
   async initialize(): Promise<void> {
@@ -36,7 +41,8 @@ export class BusyTexCompiler implements ResidentProjectCompiler {
   async compile(request: CompilationRequest): Promise<CompilationResult> {
     const { snapshot, attempt } = request;
     const pathMap = createCompilerPathMap(snapshot);
-    const failure = (reason: string, passLogs: readonly PassLog[] = [], diagnostics: readonly Diagnostic[] = []): CompilationFailure => ({
+    const passLogs: PassLog[] = [];
+    const failure = (reason: string, diagnostics: readonly Diagnostic[] = []): CompilationFailure => ({
       status: 'failure', attempt, pathMap, reason, passLogs,
       diagnostics: diagnostics.some(item => item.severity === 'error')
         ? diagnostics
@@ -66,7 +72,7 @@ export class BusyTexCompiler implements ResidentProjectCompiler {
         content: file.kind === 'text' ? file.text : new Uint8Array(await file.bytes.arrayBuffer()),
       })));
       const tool = new tools[snapshot.engine](runner);
-      const result = await tool.compile({
+      const options = {
         mainTexPath: entry.path,
         input: entry.text,
         additionalFiles,
@@ -75,23 +81,52 @@ export class BusyTexCompiler implements ResidentProjectCompiler {
         makeindex: true,
         rerun: true,
         shellEscape: false,
-      });
-      const passLogs = result.logs.map((log, index) => ({
-        tool: log.cmd, pass: index + 1, text: JSON.stringify(log, null, 2), exitCode: log.exit_code,
-      }));
-      const diagnostics = readCompilationDiagnostics(result.logs, pathMap);
-      const error = diagnostics.find(item => item.severity === 'error');
-      if (error || !result.success || result.exitCode !== 0) {
-        return failure(error?.message ?? `${snapshot.engine} exited with status ${result.exitCode}.`, passLogs, diagnostics);
-      }
-      if (!result.pdf?.length) {
-        return failure(`${snapshot.engine} produced no PDF for ${entry.path}.`, passLogs, diagnostics);
-      }
-      return {
-        status: 'success', attempt, pathMap, diagnostics, passLogs,
-        pdf: new Blob([new Uint8Array(result.pdf)], { type: 'application/pdf' }),
-        ...(result.synctex?.length ? { syncTex: new Blob([new Uint8Array(result.synctex)]) } : {}),
       };
+      const preloaded = new Set<string>();
+
+      for (;;) {
+        const result = await tool.compile(options);
+        for (const log of result.logs) {
+          passLogs.push({ tool: log.cmd, pass: passLogs.length + 1, text: JSON.stringify(log, null, 2), exitCode: log.exit_code });
+        }
+        const texDiagnostics = readCompilationDiagnostics(result.logs, pathMap);
+        const diagnostics = [...this.dependencyWarnings.values(), ...texDiagnostics];
+        const dependency = missingTexDependency(texDiagnostics);
+        if (dependency && !preloaded.has(dependency.name)) {
+          // A complete local pass has already considered the snapshot, bundled
+          // files, and dependencies registered in this worker.
+          let resource: Awaited<ReturnType<TexDependencyStore['load']>>;
+          try {
+            resource = await this.dependencies.load(dependency, runner.signal);
+          } catch (error) {
+            runner.signal.throwIfAborted();
+            const message = error instanceof Error ? error.message : String(error);
+            return failure(message, [{ severity: 'error', message }, ...diagnostics]);
+          }
+          if (resource.warning) {
+            this.dependencyWarnings.set(dependency.name, {
+              severity: 'warning', code: 'dependency-cache-write', message: resource.warning,
+            });
+          } else {
+            this.dependencyWarnings.delete(dependency.name);
+          }
+          await runner.preloadDependency(dependency.name, resource.contents);
+          preloaded.add(dependency.name);
+          continue;
+        }
+        const error = texDiagnostics.find(item => item.severity === 'error');
+        if (error || !result.success || result.exitCode !== 0) {
+          return failure(error?.message ?? `${snapshot.engine} exited with status ${result.exitCode}.`, diagnostics);
+        }
+        if (!result.pdf?.length) {
+          return failure(`${snapshot.engine} produced no PDF for ${entry.path}.`, diagnostics);
+        }
+        return {
+          status: 'success', attempt, pathMap, diagnostics, passLogs,
+          pdf: new Blob([new Uint8Array(result.pdf)], { type: 'application/pdf' }),
+          ...(result.synctex?.length ? { syncTex: new Blob([new Uint8Array(result.synctex)]) } : {}),
+        };
+      }
     } catch (error) {
       // A runtime trap can bypass the driver's WASM memory reset.
       this.discardRunner();
@@ -102,6 +137,7 @@ export class BusyTexCompiler implements ResidentProjectCompiler {
   private discardRunner(): void {
     this.runner?.terminate();
     this.runner = undefined;
+    this.dependencyWarnings.clear();
   }
 
   isReady(): boolean {

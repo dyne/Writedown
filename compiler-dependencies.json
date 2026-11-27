@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "busytex-1.4.1-basic",
+  "files": [
+    {
+      "name": "booktabs.sty",
+      "bytes": 6078,
+      "sha256": "3fe694a5406f84847143e56ba1841385364277cfe7694a9f4bc0072ca8656abc",
+      "archiveBundle": "texlive-recommended",
+      "archivePath": "/texlive/texmf-dist/tex/latex/booktabs/booktabs.sty"
+    }
+  ]
+}

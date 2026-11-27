@@ -40,8 +40,8 @@ existing prepared build. `npm run dev` serves development source. Deploy the fil
 **assets-v1.4.1** archive by URL, GitHub release/asset IDs, sizes and SHA-256
 digests. The lockfile pins wrapper integrity. The archive is 521,748,902 bytes;
 the selected static payload is 128,304,494 bytes, plus the application bundles.
-The combined engine uses only the local `texlive-basic` preload. Catalog lookups,
-the remote dependency endpoint and shell escape are disabled in the adapter.
+The combined engine starts with the local `texlive-basic` preload. The adapter
+keeps BusyTeX's native dependency networking and shell escape disabled.
 The production worker fixtures qualify pdfLaTeX, XeLaTeX with
 `xdvipdfmx`, and LuaLaTeX with the release's `luahblatex` applet.
 
@@ -95,7 +95,7 @@ renames remain on the target filesystem.
 Production builds disable Vite's recursive public-directory copying and emit
 only descriptor-listed files after checking the exact bytes handed to the
 bundler. Leftover stages, backups and unlisted files cannot enter `dist/`.
-Downloads happen during preparation, never during browser compilation.
+Provisioning downloads the pinned release archive during preparation.
 
 The unit gate interrupts a real extraction after partial data has been written,
 retries it, corrupts a required WASM file and verifies restoration, then rejects
@@ -105,3 +105,69 @@ Recovery receipts live under `WRITEDOWN_ASSET_TEST_OUTPUT`
 (default `test-results/`). The browser gate observes the actual compiler worker,
 checks successful pass exits, extracts the saved PDF marker with `pdftotext`,
 and decompresses the matching SyncTeX. It retains those outputs and all requests.
+
+## Optional TeX dependency endpoint
+
+The compiler first tries the project files, the bundled TeX tree and verified
+files already in its resident worker. When TeX reports a required style or
+class missing, the adapter can preload the matching entry from the local
+release cache or obtain it from an optional endpoint. The catalog in
+[`compiler-dependencies.json`](compiler-dependencies.json) approves only
+`booktabs.sty` for this release. Other missing files stay local and appear in
+the compilation diagnostics.
+
+Leave `VITE_TEX_DEPENDENCY_ENDPOINT` unset or empty to use the bundled release
+and any verified dependencies already in browser storage. To enable downloads,
+set the public build-time variable to the endpoint directory URL and run
+`npm run build`. Use an absolute HTTPS URL without credentials, a query or
+a fragment. HTTP loopback URLs work for local testing.
+
+After preparing the compiler, generate the endpoint files in a staging
+directory with the pinned archive. The command honors `WRITEDOWN_ASSET_ARCHIVE`
+and `WRITEDOWN_ASSET_CACHE`.
+
+```sh
+node scripts/prepare-dependencies.ts /absolute/path/to/dependency-staging
+```
+
+Serve the resulting `<release-id>/<sha256>/<filename>` paths as immutable
+binary files under the configured directory. A separate origin must allow
+the app's origin with CORS. The browser issues a credential-free GET to the
+exact catalog URL, verifies the size and SHA-256 before use and stores the
+verified bytes in release-scoped Cache Storage. The worker receives those
+bytes through the pinned preload message. Project paths, source, outputs and
+arbitrary search misses stay on the device.
+
+To extend the catalog, choose a required style or class from an inventoried
+bundle in the same locked archive and record its exact packed path, byte count
+and SHA-256 after reviewing it. The preparation command verifies the archive
+and bundle members, extracts the selected file and reports its observed size
+and digest on a catalog mismatch. It publishes each file only after verifying
+the catalog pin. The extracted booktabs file retains its LaTeX Project Public
+License notice from the TeX Live distribution.
+
+## Offline access
+
+A production build registers a service worker under `/writedown/` on HTTPS
+or a loopback origin. **Offline access is ready** means the worker controls the
+page and has verified and saved the app shell and the pinned compiler files.
+Compile once with each required optional dependency while online so that its
+verified bytes are available on the next visit.
+
+The app-owned runtime cache is keyed by scope, compiler release and build.
+An update verifies a separate set before it can replace the active worker.
+After the update is ready, close the open Writedown tabs to apply it. An
+interrupted installation leaves the previous version usable. Use **Retry
+offline setup** after restoring service or freeing browser storage.
+
+The BusyTeX wrapper tracks its preload version in local storage and can clear
+its own `EM_PRELOAD_CACHE` database when that version changes. The worker can
+rebuild that database offline from the app-owned copy of the verified release.
+Optional dependency bytes are kept in a separate release cache. If a verified
+dependency compiles online but cannot be saved, **Retry dependency cache**
+starts a fresh worker for the same project revision.
+
+Cache repair is independent of the IndexedDB project store. If a saved project
+references a compiler release that the current build cannot run, the editor
+shows the unavailable release and offers an explicit switch to the installed
+one. Switching saves a new revision with the same source files.

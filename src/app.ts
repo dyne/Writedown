@@ -3,6 +3,7 @@ import type { ProjectSnapshot } from './project/snapshot.ts';
 import { CompilationService } from './compiler/service.ts';
 import type { CompilationState } from './compiler/service.ts';
 import { editorEvents, mountProjectEditor } from './editor/project-editor.ts';
+import { mountOfflineStatus } from './offline/registration.ts';
 import './editor/project-editor.css';
 import release from '../compiler-release.json';
 import reference from './compiler/reference.tex?raw';
@@ -85,7 +86,13 @@ function presentProject(state: CompilationState) {
     status.textContent = 'The example was interrupted by an editor change.';
   }
   projectStatus.dataset.state = state.status;
-  retry.hidden = state.status !== 'settled' || state.result.status !== 'failure';
+  const cacheWarning = state.status === 'settled' &&
+    state.result.diagnostics.find(item => item.code === 'dependency-cache-write');
+  const unavailable = state.status !== 'idle' && state.snapshot.releaseId !== release.id;
+  projectStatus.hidden = unavailable;
+  retry.hidden = unavailable || state.status !== 'settled' || (state.result.status === 'success' && !cacheWarning);
+  retry.textContent = cacheWarning && state.status === 'settled' && state.result.status === 'success'
+    ? 'Retry dependency cache' : 'Retry compilation';
   if (state.status === 'idle') {
     delete projectStatus.dataset.revision;
     projectStatus.textContent = 'Choose a TeX source to compile.';
@@ -98,7 +105,7 @@ function presentProject(state: CompilationState) {
   if (state.status === 'compiling') projectStatus.textContent = `Compiling revision ${revision}…`;
   if (state.status === 'settled') {
     projectStatus.textContent = state.result.status === 'success'
-      ? `Revision ${revision} compiled.`
+      ? `Revision ${revision} compiled.${cacheWarning ? ' ' + cacheWarning.message : ''}`
       : `Revision ${revision} failed. ${state.result.reason}`;
   }
 }
@@ -108,7 +115,10 @@ const compiler = new CompilationService(async snapshot => {
     throw new Error(`Compiler release ${snapshot.releaseId} is unavailable. Installed release: ${release.id}.`);
   }
   const { BusyTexCompiler } = await import('./compiler/busytex.ts');
-  return new BusyTexCompiler(new URL(`${import.meta.env.BASE_URL}compiler/${release.id}`, location.origin).href);
+  return new BusyTexCompiler(
+    new URL(`${import.meta.env.BASE_URL}compiler/${release.id}`, location.origin).href,
+    import.meta.env.VITE_TEX_DEPENDENCY_ENDPOINT,
+  );
 }, state => {
   const isExample = state.status !== 'idle' && state.snapshot === exampleSnapshot;
   if (isExample) {
@@ -140,4 +150,5 @@ compile.addEventListener('click', () => {
 });
 mountProjectEditor(editor, release.id);
 editor.append(projectCompilation);
+mountOfflineStatus(app, import.meta.env.BASE_URL);
 app.dataset.ready = 'true';

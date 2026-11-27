@@ -92,6 +92,10 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
               </select>
             </div>
           </div>
+          <div class="compiler-release-notice" id="compiler-release-notice" hidden>
+            <p id="compiler-release-status" aria-live="polite"></p>
+            <button id="switch-compiler-release" type="button"></button>
+          </div>
           <div class="editor-document">
             <header class="editor-document-header">
               <h2 id="source-path">Source</h2>
@@ -128,6 +132,10 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
   const sourceEmpty = find('source-empty');
   const goToLine = find<HTMLButtonElement>('go-to-line');
   const status = find('project-save-status');
+  const releaseNotice = find('compiler-release-notice');
+  const releaseStatus = find('compiler-release-status');
+  const switchRelease = find<HTMLButtonElement>('switch-compiler-release');
+  switchRelease.textContent = `Switch to ${releaseId}`;
   const storage = new IndexedDbProjectStorage();
   const makeProject = (projectId: string) => WorkingProject.create(storage, { projectId, entryPath: 'main.tex', releaseId, files: [] });
 
@@ -180,6 +188,7 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
     setOptions(rootChoice, paths.filter(isTex), snapshot.entryPath, 'No .tex files');
     engineChoice.value = snapshot.engine;
     bibliographyChoice.value = snapshot.bibliography;
+    renderRelease(snapshot);
     showFile(fileChoice.value);
   }
 
@@ -219,10 +228,17 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
 
   function update(changes: Parameters<WorkingProject['update']>[0]) {
     const snapshot = project.update(changes);
+    if (changes.releaseId !== undefined) renderRelease(snapshot);
     emit<ProjectSnapshot>(editorEvents.snapshot, snapshot);
     setStatus('Unsaved changes');
     window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(() => { void saveCurrent().catch(() => {}); }, 350);
+  }
+
+  function renderRelease(snapshot: ProjectSnapshot) {
+    const available = snapshot.releaseId === releaseId;
+    releaseNotice.hidden = available;
+    releaseStatus.textContent = available ? '' : `Compiler release ${snapshot.releaseId} is unavailable. Installed release: ${releaseId}.`;
   }
 
   function activate(next: WorkingProject, ids: string[]) {
@@ -314,6 +330,9 @@ export function mountProjectEditor(pane: HTMLElement, releaseId: string) {
   rootChoice.addEventListener('change', () => update({ entryPath: rootChoice.value }));
   engineChoice.addEventListener('change', () => update({ engine: engineChoice.value as TexEngine }));
   bibliographyChoice.addEventListener('change', () => update({ bibliography: bibliographyChoice.value === 'bibtex' ? 'bibtex' : 'none' }));
+  switchRelease.addEventListener('click', () => {
+    if (project.snapshot.releaseId !== releaseId) update({ releaseId });
+  });
   source.addEventListener('input', () => {
     const files = project.snapshot.files.map(file => file.path === activeFile && file.kind === 'text' ? { ...file, text: source.value } : file);
     update({ files });

@@ -157,14 +157,20 @@ button:active:not(:disabled) { background: var(--select); }
 #save-project:hover { background: #0f4d3d; }
 #save-project:active { background: #0b3e30; }
 
-.project-compiler {
+.project-compiler, .offline-access, .compiler-release-notice {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem 0.8rem;
   margin-block-start: 0.35rem;
 }
-.project-compiler p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.project-compiler p, .offline-access p, .compiler-release-notice p {
+  margin: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.offline-access { margin-block-start: 1rem; }
+.compiler-release-notice { padding: 0.5rem 1rem; }
 
 .reference-compiler {
   border-block-start: 1px solid var(--line);

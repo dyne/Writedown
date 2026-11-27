@@ -96,7 +96,9 @@ test('the production editor accepts a new revision during real worker compilatio
     expect(captured.settled.map(attempt => attempt.revision)).toEqual([oldRevision + 1]);
     expect(captured.generations).toEqual([1, 1]);
     expect(workers.filter(url => url.endsWith('/busytex_worker.js'))).toHaveLength(1);
-    expect(server.requests.filter(request => request.path.endsWith('/texlive-basic.data'))).toHaveLength(1);
+    const dataRequests = server.requests.filter(request => request.path.endsWith('/texlive-basic.data'));
+    expect(dataRequests.length).toBeGreaterThan(0);
+    expect(dataRequests.filter(request => !request.headers.referer?.endsWith('/service-worker.js')).length).toBeLessThanOrEqual(1);
 
     const { pdf, ...processing } = captured;
     const path = testInfo.outputPath('latest.pdf');

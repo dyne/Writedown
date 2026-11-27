@@ -160,9 +160,10 @@ test('compiler release identifies a missing production worker asset', async ({ p
       await expect(status).toContainText('Could not initialize the BusyTeX worker for ' + release.id + ' (busytex_worker.js)');
       await writeFile(testInfo.outputPath('status.txt'), (await status.textContent()) ?? '');
       await expect(page.getByRole('link', { name: 'Download PDF' })).toHaveCount(0);
-      expect(server.requests.filter(request => request.status >= 400)).toEqual([
+      expect(server.requests.filter(request => request.status >= 400 && request.headers['sec-fetch-dest'] === 'worker')).toMatchObject([
         { method: 'GET', path: '/writedown/' + workerPath, status: 404 },
       ]);
+      await expect(page.locator('#offline-status')).toContainText('Could not load offline asset ' + workerPath);
     } finally {
       await writeFile(testInfo.outputPath('requests.json'), JSON.stringify(server.requests, null, 2));
       await server.close();

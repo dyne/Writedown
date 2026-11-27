@@ -36,6 +36,7 @@ export function createCompilationRequest(
 export interface Diagnostic {
   readonly severity: 'info' | 'warning' | 'error';
   readonly message: string;
+  readonly code?: 'dependency-cache-write';
   readonly path?: string;
   readonly line?: number;
   readonly column?: number;
