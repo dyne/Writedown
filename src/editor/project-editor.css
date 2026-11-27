@@ -1,0 +1,183 @@
+:root {
+  color-scheme: light;
+  --paper: #fbfaf6;
+  --panel: #efeee6;
+  --canvas: #e8e8df;
+  --ink: #172923;
+  --muted: #45564f;
+  --line: #a9b2a9;
+  --accent: #17614e;
+  --select: #c5e1d5;
+  --danger: #8b2c22;
+  font-family: system-ui, sans-serif;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--canvas);
+  accent-color: var(--accent);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+::selection { background: var(--select); color: var(--ink); }
+
+#app {
+  max-inline-size: 84rem;
+  margin-inline: auto;
+  padding: 0 clamp(0.5rem, 3vw, 2rem) 2rem;
+}
+
+.app-header {
+  border-block-end: 1px solid var(--line);
+  padding-block: 0.8rem;
+  margin-block-end: 1rem;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: -0.03em;
+  font-weight: 750;
+}
+
+button, select, input, textarea { font: inherit; color: inherit; }
+button, select, input {
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  background: var(--paper);
+  padding: 0.34rem 0.6rem;
+  min-block-size: 2.4rem;
+  max-inline-size: 100%;
+}
+
+button, select, summary { cursor: pointer; }
+button { overflow-wrap: anywhere; font-weight: 600; }
+button:hover:not(:disabled), select:hover:not(:disabled) { border-color: var(--accent); }
+button:active:not(:disabled) { background: var(--select); }
+:disabled { cursor: default; opacity: 0.7; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.visually-hidden {
+  position: absolute;
+  clip-path: inset(50%);
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.editor-access {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(11rem, 17rem) minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--paper);
+}
+
+.editor-sidebar {
+  min-inline-size: 0;
+  background: var(--panel);
+  padding: 1rem;
+  border-inline-end: 1px solid var(--line);
+  border-radius: 0.8rem 0 0 0.8rem;
+}
+
+.editor-group { display: grid; gap: 0.35rem; min-inline-size: 0; }
+.editor-group + .editor-group { margin-block-start: 1.15rem; }
+.editor-group > select, .editor-field > select, .editor-form input { inline-size: 100%; }
+.editor-file-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.editor-file-actions button { flex: 1 1 auto; }
+.editor-form { display: grid; gap: 0.3rem; margin-block: 0.45rem; }
+.editor-sidebar summary { padding-block: 0.35rem; color: var(--accent); overflow-wrap: anywhere; }
+.editor-sidebar summary:hover { text-decoration: underline; text-underline-offset: 0.16em; }
+.editor-field { min-inline-size: 0; }
+.editor-field > label, .editor-group > label, .editor-form > label {
+  display: block;
+  font-weight: 650;
+  margin-block-end: 0.2rem;
+  overflow-wrap: anywhere;
+}
+
+.editor-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+  border-block-end: 1px solid var(--line);
+}
+
+.editor-document-header,
+.editor-save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem 1rem;
+  padding: 0.65rem 1rem;
+}
+
+.editor-document-header h2 {
+  margin: 0;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  font: 650 1rem/1.4 ui-monospace, monospace;
+}
+
+.editor-jump { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.editor-jump input { inline-size: 4rem; }
+.editor-empty { color: var(--muted); margin: 0; padding: 1rem; min-block-size: 6rem; }
+
+#source-text {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 13rem;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-block: 1px solid var(--line);
+  border-radius: 0;
+  background: #fffefb;
+  font: 0.95rem/1.6 ui-monospace, monospace;
+  caret-color: var(--accent);
+  resize: vertical;
+}
+
+#source-text:focus-visible { outline-offset: -3px; }
+.editor-save { border-block-start: 1px solid var(--line); }
+.editor-save p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.editor-save p.editor-error { color: var(--danger); }
+#save-project { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+#save-project:hover { background: #0f4d3d; }
+#save-project:active { background: #0b3e30; }
+
+.reference-compiler {
+  border-block-start: 1px solid var(--line);
+  margin-block-start: 1.1rem;
+  padding-block-start: 0.8rem;
+}
+
+.reference-compiler h2 { margin: 0 0 0.4rem; font-size: 1rem; }
+.reference-compiler p { margin: 0.4rem 0 0; color: var(--muted); overflow-wrap: anywhere; }
+.reference-compiler a { color: var(--accent); text-underline-offset: 0.15em; }
+
+@media (max-width: 55rem) {
+  .editor-layout { grid-template-columns: minmax(0, 1fr); }
+  .editor-sidebar {
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--line);
+    border-radius: 0.8rem 0.8rem 0 0;
+  }
+}
+
+@media (max-width: 36rem) {
+  .editor-settings, .editor-sidebar,
+  .editor-document-header, .editor-save, #source-text { padding-inline: 0.6rem; }
+  .editor-jump input { inline-size: 3.25rem; }
+}

@@ -1,5 +1,7 @@
 import { createProjectSnapshot } from './project/snapshot.ts';
 import { createCompilationRequest } from './compiler/contracts.ts';
+import { mountProjectEditor } from './editor/project-editor.ts';
+import './editor/project-editor.css';
 import release from '../compiler-release.json';
 import reference from './compiler/reference.tex?raw';
 
@@ -8,14 +10,24 @@ if (!app) throw new Error('Application mount is missing');
 
 const title = document.createElement('h1');
 title.textContent = 'Writedown';
+const masthead = document.createElement('header');
+masthead.className = 'app-header';
+masthead.append(title);
+const editor = document.createElement('section');
+editor.setAttribute('aria-label', 'Project editor');
+const example = document.createElement('section');
+example.className = 'reference-compiler';
+const exampleTitle = document.createElement('h2');
+exampleTitle.textContent = 'Compiler example';
 const status = document.createElement('p');
-status.textContent = 'Ready for a local LaTeX project.';
+status.textContent = 'Run the built-in LaTeX document on this device.';
 status.setAttribute('role', 'status');
 const compile = document.createElement('button');
 compile.textContent = 'Compile example';
-compile.style.font = 'inherit';
 const outputs = document.createElement('div');
-app.replaceChildren(title, status, compile, outputs);
+example.append(exampleTitle, compile, status, outputs);
+app.replaceChildren(masthead, editor, example);
+mountProjectEditor(editor, release.id);
 app.dataset.ready = 'true';
 
 let generation = 0;
