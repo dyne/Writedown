@@ -13,6 +13,7 @@ export class FormulaError extends Error {}
 export const formulaMacroPath = 'formula-macros.tex';
 
 const delimiters = [
+  { open: '<math>', close: '</math>', displayMode: true },
   { open: '$$', close: '$$', displayMode: true },
   { open: '\\[', close: '\\]', displayMode: true },
   { open: '\\(', close: '\\)', displayMode: false },

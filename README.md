@@ -1,7 +1,7 @@
 # Writedown
 
-Writedown is a browser editor for local LaTeX projects. Import a folder,
-choose its root document, and edit with a live PDF preview. The browser stores
+Writedown is a browser editor for local LaTeX and Markdown projects. Import a
+folder, choose its root document, and edit with a live PDF preview. The browser stores
 your project and runs TeX in a worker. Source files, logs, and generated PDFs
 stay on your device.
 
@@ -42,6 +42,32 @@ Choose **MathJax SVG** in **Formula renderer** for SVG output. It supports
 basic TeX, AMS math, and project macros. Selecting it loads the pinned
 MathJax components and TeX font data from `mathjax/4.1.3/`. Render a formula
 online once to use SVG after an offline reload. KaTeX is the default.
+
+### Markdown input
+
+Create or import a `.md` or `.markdown` file and choose it as the **Root document**.
+The **Input format** control switches the open source file between Markdown and
+LaTeX without changing its contents. The choice is saved with the project.
+Writedown converts Markdown to a LaTeX article in the browser and uses the
+selected TeX engine for the same live PDF preview.
+
+Use `<math>…</math>` within a paragraph for inline math or on its own for a
+display equation. Use `<latex>…</latex>` for LaTeX commands and environments
+that belong in the body of a document.
+
+```markdown
+# Field notes
+
+The estimate is <math>\frac{1}{2}</math>.
+
+<math>
+\sum_{k=1}^n k = \frac{n(n+1)}{2}
+</math>
+
+<latex>
+\textbf{Measurements taken at noon.}
+</latex>
+```
 
 ## Host the production build
 

@@ -1,10 +1,24 @@
 export type TexEngine = 'pdflatex' | 'xelatex' | 'lualatex';
 export type BibliographyMode = 'none' | 'bibtex' | 'biber';
+export type SourceFormat = 'latex' | 'markdown';
 
 export interface TextFile {
   readonly kind: 'text';
   readonly path: string;
   readonly text: string;
+  readonly format?: SourceFormat;
+}
+
+export function isMarkdownPath(path: string): boolean {
+  return /\.(?:md|markdown)$/i.test(path);
+}
+
+export function isDocumentPath(path: string): boolean {
+  return /\.tex$/i.test(path) || isMarkdownPath(path);
+}
+
+export function sourceFormat(file: TextFile): SourceFormat {
+  return file.format ?? (isMarkdownPath(file.path) ? 'markdown' : 'latex');
 }
 
 export interface BinaryFile {
@@ -62,7 +76,10 @@ export function createProjectSnapshot(input: ProjectSnapshotInput): ProjectSnaps
     const path = normalizeProjectPath(file.path);
     if (paths.has(path)) throw new Error(`Duplicate project path: ${path}`);
     paths.add(path);
-    if (file.kind === 'text') return Object.freeze({ kind: 'text', path, text: file.text });
+    if (file.kind === 'text') {
+      const format = file.format === 'latex' || file.format === 'markdown' ? { format: file.format } : {};
+      return Object.freeze({ kind: 'text', path, text: file.text, ...format });
+    }
     const bytes = file.bytes instanceof Blob ? file.bytes : new Blob([new Uint8Array(file.bytes)]);
     return Object.freeze({ kind: 'binary', path, bytes });
   });

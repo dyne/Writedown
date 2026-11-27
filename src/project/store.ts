@@ -1,5 +1,5 @@
-import { createProjectSnapshot } from './snapshot.ts';
-import type { ProjectSnapshot, ProjectSnapshotInput } from './snapshot.ts';
+import { createProjectSnapshot, isMarkdownPath } from './snapshot.ts';
+import type { ProjectFile, ProjectSnapshot, ProjectSnapshotInput } from './snapshot.ts';
 
 export interface ProjectStorage {
   load(projectId: string): Promise<ProjectSnapshot | undefined>;
@@ -56,7 +56,15 @@ export class IndexedDbProjectStorage implements ProjectStorage {
 
   async load(projectId: string): Promise<ProjectSnapshot | undefined> {
     const record = await this.read<ProjectSnapshot | undefined>(records => records.get(projectId));
-    return record && createProjectSnapshot(record);
+    if (!record) return undefined;
+    const files = await Promise.all(record.files.map(async (file): Promise<ProjectFile> => {
+      // Older versions imported Markdown as a binary attachment.
+      if (file.kind === 'binary' && isMarkdownPath(file.path)) {
+        return { kind: 'text', path: file.path, text: await file.bytes.text() };
+      }
+      return file;
+    }));
+    return createProjectSnapshot({ ...record, files });
   }
 
   async save(snapshot: ProjectSnapshot): Promise<void> {

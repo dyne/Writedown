@@ -131,9 +131,10 @@ button:active:not(:disabled) { background: var(--select); }
   font: 650 1rem/1.4 ui-monospace, monospace;
 }
 
-.editor-jump { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.editor-jump, .editor-format { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.editor-markdown-help { color: var(--muted); margin: 0; padding: 0 1rem 0.65rem; overflow-wrap: anywhere; }
 .editor-save-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
-.editor-jump input { inline-size: 4rem; }
+.editor-jump input { inline-size: 4.5rem; }
 .editor-empty { color: var(--muted); margin: 0; padding: 1rem; min-block-size: 6rem; }
 
 #source-text {
@@ -194,6 +195,5 @@ button:active:not(:disabled) { background: var(--select); }
 
 @media (max-width: 36rem) {
   .editor-settings, .editor-sidebar,
-  .editor-document-header, .editor-save, #source-text { padding-inline: 0.6rem; }
-  .editor-jump input { inline-size: 3.25rem; }
+  .editor-document-header, .editor-markdown-help, .editor-save, #source-text { padding-inline: 0.6rem; }
 }

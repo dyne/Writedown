@@ -1,5 +1,7 @@
 import { LuaLatex, PdfLatex, XeLatex } from 'texlyre-busytex';
 import release from '../../compiler-release.json';
+import { isMarkdownPath, sourceFormat } from '../project/snapshot.ts';
+import type { ProjectSnapshot } from '../project/snapshot.ts';
 import type { CompilationFailure, CompilationRequest, CompilationResult, Diagnostic, PassLog, ResidentProjectCompiler } from './contracts.ts';
 import { missingTexDependency } from './dependency-catalog.ts';
 import { TexDependencyStore } from './dependency-store.ts';
@@ -12,6 +14,16 @@ export const compilerReleaseId = release.id;
 const tools = { pdflatex: PdfLatex, xelatex: XeLatex, lualatex: LuaLatex };
 const missingBiberAssets = ['biber.js', 'biber.wasm', 'biber.data']
   .filter(name => !release.files.some(file => file.path === name));
+
+function generatedEntryPath(snapshot: ProjectSnapshot): string {
+  const directory = snapshot.entryPath.slice(0, snapshot.entryPath.lastIndexOf('/') + 1);
+  const occupied = new Set(snapshot.files.map(file => file.path));
+  let path = directory + 'writedown-preview.tex';
+  for (let suffix = 2; occupied.has(path); suffix++) {
+    path = directory + 'writedown-preview-' + suffix + '.tex';
+  }
+  return path;
+}
 
 /** One worker with the combined binaries and the local basic preload. */
 export class BusyTexCompiler implements ResidentProjectCompiler {
@@ -40,7 +52,7 @@ export class BusyTexCompiler implements ResidentProjectCompiler {
 
   async compile(request: CompilationRequest): Promise<CompilationResult> {
     const { snapshot, attempt } = request;
-    const pathMap = createCompilerPathMap(snapshot);
+    let pathMap = createCompilerPathMap(snapshot);
     const passLogs: PassLog[] = [];
     const failure = (reason: string, diagnostics: readonly Diagnostic[] = []): CompilationFailure => ({
       status: 'failure', attempt, pathMap, reason, passLogs,
@@ -57,7 +69,27 @@ export class BusyTexCompiler implements ResidentProjectCompiler {
     }
     const entry = snapshot.files.find(file => file.path === snapshot.entryPath);
     if (entry?.kind !== 'text') {
-      return failure(`Select a TeX source file to compile: ${snapshot.entryPath}`);
+      return failure(`Select a source document to compile: ${snapshot.entryPath}`);
+    }
+
+    const isMarkdown = sourceFormat(entry) === 'markdown';
+    let mainTexPath = entry.path;
+    let input = entry.text;
+    if (isMarkdown || isMarkdownPath(entry.path)) {
+      mainTexPath = generatedEntryPath(snapshot);
+      let sourceLines: readonly (number | undefined)[] | undefined;
+      if (isMarkdown) {
+        const { markdownDocument, UnclosedTexSection } = await import('./markdown.ts');
+        try {
+          const generated = markdownDocument(input);
+          input = generated.tex;
+          sourceLines = generated.sourceLines;
+        } catch (error) {
+          if (!(error instanceof UnclosedTexSection)) throw error;
+          return failure(error.message, [{ severity: 'error', message: error.message, path: entry.path, line: error.line }]);
+        }
+      }
+      pathMap = createCompilerPathMap(snapshot, { path: mainTexPath, sourceLines });
     }
 
     try {
@@ -73,8 +105,8 @@ export class BusyTexCompiler implements ResidentProjectCompiler {
       })));
       const tool = new tools[snapshot.engine](runner);
       const options = {
-        mainTexPath: entry.path,
-        input: entry.text,
+        mainTexPath,
+        input,
         additionalFiles,
         bibtex: snapshot.bibliography === 'bibtex',
         biber: snapshot.bibliography === 'biber',
