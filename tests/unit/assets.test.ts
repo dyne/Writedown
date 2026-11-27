@@ -93,7 +93,8 @@ test('pinned preparation survives real extraction interruption and repairs corru
 });
 
 test('custom publication on another filesystem with a read-only parent retains same-device verified publication', { timeout: 60_000 }, async context => {
-  const temporary = await mkdtemp(join(tmpdir(), 'writedown-cross-device-'));
+  const configuredDirectory = process.env.WRITEDOWN_CROSS_DEVICE_TEST_DIR;
+  const temporary = await mkdtemp(join(configuredDirectory ?? tmpdir(), 'writedown-cross-device-'));
   const assetRoot = join(temporary, 'public');
   const events: Record<string, unknown>[] = [];
   const parent = resolve(process.env.WRITEDOWN_ASSET_TEST_OUTPUT ?? 'test-results');
@@ -104,6 +105,7 @@ test('custom publication on another filesystem with a read-only parent retains s
   let verifiedFiles = 0;
   try {
     if (repositoryDevice === targetDevice) {
+      assert.equal(configuredDirectory, undefined, 'The configured test directory must be on a separate filesystem');
       context.skip('The OS temporary directory is on the repository filesystem');
       return;
     }

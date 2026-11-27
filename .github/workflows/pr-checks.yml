@@ -43,6 +43,8 @@ jobs:
         run: npm run assets:prepare
 
       - name: Typecheck, build, and test
+        env:
+          WRITEDOWN_CROSS_DEVICE_TEST_DIR: /dev/shm
         run: npm run check
 
       - name: Upload browser test results on failure
