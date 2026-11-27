@@ -68,20 +68,27 @@ async function assertCurrent(page: Page, revision: number, marker: string) {
   await expect(mark).toBeVisible();
   await mark.scrollIntoViewIfNeeded();
   await expect(mark).toBeInViewport();
-  // Text geometry must overlay the real ink, not merely exist in a DOM layer.
-  const ink = await mark.evaluate(element => {
+  // Check ink across the text box, including antialiased strokes at small scales.
+  const inkCoverage = await mark.evaluate(element => {
     const canvas = element.closest('.pdf-page')!.querySelector('canvas')!;
     const box = element.getBoundingClientRect();
     const page = canvas.getBoundingClientRect();
-    const x = Math.max(0, Math.floor((box.left - page.left) * canvas.width / page.width));
-    const y = Math.max(0, Math.floor((box.top - page.top) * canvas.height / page.height));
-    const width = Math.min(canvas.width - x, Math.ceil(box.width * canvas.width / page.width));
-    const height = Math.min(canvas.height - y, Math.ceil(box.height * canvas.height / page.height));
+    const scaleX = canvas.width / page.width;
+    const scaleY = canvas.height / page.height;
+    const x = Math.max(0, Math.floor((box.left - page.left) * scaleX));
+    const y = Math.max(0, Math.floor((box.top - page.top) * scaleY));
+    const width = Math.min(canvas.width, Math.ceil((box.right - page.left) * scaleX)) - x;
+    const height = Math.min(canvas.height, Math.ceil((box.bottom - page.top) * scaleY)) - y;
     if (width < 1 || height < 1) return 0;
     const rgba = canvas.getContext('2d')!.getImageData(x, y, width, height).data;
-    return rgba.filter((value, index) => index % 4 === 0 && value < 128).length;
+    const inkColumns = new Set<number>();
+    for (let pixel = 0; pixel < width * height; pixel++) {
+      const offset = pixel * 4;
+      if (rgba[offset + 3] >= 64 && rgba[offset] < 192) inkColumns.add(pixel % width);
+    }
+    return inkColumns.size / width;
   });
-  expect(ink).toBeGreaterThan(12);
+  expect(inkCoverage).toBeGreaterThan(0.25);
 }
 
 for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
